@@ -154,17 +154,18 @@ resource "null_resource" "sql_user_setup" {
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
 
-      # Authenticate to Azure using ARM env vars
-      if ($env:ARM_CLIENT_SECRET) {
-          $securePassword = ConvertTo-SecureString $env:ARM_CLIENT_SECRET -AsPlainText -Force
-          $credential = New-Object System.Management.Automation.PSCredential($env:ARM_CLIENT_ID, $securePassword)
-          Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      elseif ($env:ARM_OIDC_TOKEN) {
-          Connect-AzAccount -ServicePrincipal -ApplicationId $env:ARM_CLIENT_ID -FederatedToken $env:ARM_OIDC_TOKEN -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
+      $spName = '${azuread_service_principal.nme_app.display_name}'
+      if ($spName.Contains('[') -or $spName.Contains(']') -or $spName.Contains("'")) {
+        throw "Service Principal name contains invalid characters"
       }
 
-      Set-AzContext -Subscription '${data.azurerm_client_config.current.subscription_id}' | Out-Null
+      $miName = '${var.web_app_portal_name}'
+      if ($miName.Contains('[') -or $miName.Contains(']') -or $miName.Contains("'")) {
+        throw "Web App name contains invalid characters"
+      }
+
+      # Authenticate to Azure using ARM env vars
+      . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
       # Get token for database scope
       if (-not (Get-Command Get-AzAccessToken).Parameters.AsSecureString) {
@@ -174,7 +175,6 @@ resource "null_resource" "sql_user_setup" {
           try { $sqlToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) } finally { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
       }
 
-      $spName = '${azuread_service_principal.nme_app.display_name}'
       $query = @"
       IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$spName')
       BEGIN
@@ -188,6 +188,22 @@ resource "null_resource" "sql_user_setup" {
       Invoke-Sqlcmd -ConnectionString "Data Source=tcp:${azurerm_mssql_server.sql_server.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.database.name};Persist Security Info=False;Multiple Active Result Sets=False;Connect Timeout=30;Encrypt=True;Trust Server Certificate=False" -AccessToken $sqlToken -Query $query
 
       Write-Host "SQL user setup completed for '$spName'"
+
+      # Create SQL user for web app managed identity (when enabled)
+      
+      $miQuery = @"
+      IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$miName')
+      BEGIN
+        CREATE USER [$miName] FROM EXTERNAL PROVIDER;
+      END
+      ALTER ROLE db_ddladmin ADD MEMBER [$miName];
+      ALTER ROLE db_datareader ADD MEMBER [$miName];
+      ALTER ROLE db_datawriter ADD MEMBER [$miName];
+      "@
+
+      Invoke-Sqlcmd -ConnectionString "Data Source=tcp:${azurerm_mssql_server.sql_server.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.database.name};Persist Security Info=False;Multiple Active Result Sets=False;Connect Timeout=30;Encrypt=True;Trust Server Certificate=False" -AccessToken $sqlToken -Query $miQuery
+
+      Write-Host "SQL user setup completed for managed identity '$miName'"
     EOT
   }
 

@@ -58,6 +58,9 @@ module "service" {
   data_protection_key_name             = var.data_protection_key_name
   maintenance_service_url              = var.maintenance_service_url
   app_package_version                  = var.app_package_version
+  app_package_local_path               = var.app_package_local_path
   app_role_assignments                 = var.app_role_assignments
   private_endpoint_post_resolve_delay   = var.private_endpoint_post_resolve_delay
+  app_cert_name                         = var.app_cert_name
+  app_cert_lifetime_months              = var.app_cert_lifetime_months
 }

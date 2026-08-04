@@ -14,6 +14,7 @@ This Terraform configuration deploys [Nerdio Manager for Enterprise (NME)](https
 - [Outputs](#outputs)
 - [Configure private endpoints](#configure-private-endpoints)
 - [Using a Pre-Existing VNet and Subnets](#using-a-pre-existing-vnet-and-subnets)
+- [Offline / Disconnected Package Install](#offline--disconnected-package-install)
 - [Operational Notes](#operational-notes)
 - [Troubleshooting](#troubleshooting)
 
@@ -307,7 +308,8 @@ tags_by_resource = {
 | `private_web_app` | `bool` | `false` | Whether the Web App should be accessible only via private endpoint |
 | `data_protection_key_name` | `string` | `"DataProtection-main"` | Name of the data protection key in Key Vault |
 | `maintenance_service_url` | `string` | `"https://nwp-web-app.azurewebsites.net"` | URL of the NME maintenance service |
-| `app_package_version` | `string` | `"latest"`  | Application package version to deploy or `latest` |
+| `app_package_version` | `string` | `"latest"`  | Application package version to deploy or `latest`. Ignored when `app_package_local_path` is set |
+| `app_package_local_path` | `string` | `null` | Absolute path to a pre-downloaded NME application package `.zip` on the machine running Terraform. When set, the maintenance service is not contacted (offline/disconnected install). The package archive must contain `app.zip` and related deployment files |
 | `app_role_assignments` | `map(list(string))` | `{}` | Map of app role names to lists of user principal names to assign |
 | `private_endpoint_post_resolve_delay` | `number` | `0` | Extra delay in seconds after private endpoint connectivity is confirmed. Increase to 60–180 if first deploy with private endpoints fails with 403 errors on KV writes |
 
@@ -517,6 +519,22 @@ terraform apply -var-file="terraform.tfvars"
 
 Terraform will deploy the remaining NME service resources (Web App, SQL, Key Vault, etc.) and use the imported VNet and subnets without touching them.
 
+
+## Offline / Disconnected Package Install
+
+By default, the deployment downloads the NME application package from the Nerdio maintenance service over the public internet. If the machine running Terraform cannot reach the maintenance service (restricted or disconnected environments), you can supply a pre-downloaded package instead:
+
+```hcl
+app_package_local_path = "C:/packages/package.zip"   # or /opt/packages/package.zip on Linux
+```
+
+When `app_package_local_path` is set:
+
+- The maintenance service is **not contacted** — no version resolution and no package download.
+- `app_package_version` is ignored; the version deployed is whatever the local file contains.
+- The file must be the `package.zip` served by the maintenance service, or an equivalent archive containing `app.zip` and related deployment files. The inner `app.zip` alone is not supported.
+
+Note that this is not a fully air-gapped install: the deployment still requires connectivity to Azure (ARM, the web app's SCM/Kudu endpoint, and the health-check endpoint). The typical scenario is a runner that can reach Azure — possibly via private endpoints and the deployment VNet — but cannot reach the Nerdio maintenance service.
 
 ## Operational Notes
 

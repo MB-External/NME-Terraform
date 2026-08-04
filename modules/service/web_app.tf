@@ -90,12 +90,16 @@ resource "azurerm_windows_web_app" "web_app_portal" {
 
     # SQL
     "Deployment:SqlServerId" = local.sql_server_resource_id
+    "ConnectionStrings:DefaultConnection" = "Server=tcp:${var.sql_server_name}${local.sql_server_suffix},1433;Initial Catalog=${var.database_name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;"
 
     # Azure AD / NME application (previously set by install-az.ps1)
     "RoleAuthorization:Enabled"    = "True"
     "Features:CumulativeRbac"      = "True"
     "AzureAD:ClientId"             = azuread_application.nme_app.client_id
     "AzureAD:TenantId"             = data.azurerm_client_config.current.tenant_id
+    "AzureAD:ClientCertificates:0:SourceType" = "KeyVault"
+    "AzureAD:ClientCertificates:0:KeyVaultCertificateName" = var.app_cert_name
+    "AzureAD:ClientCertificates:0:KeyVaultUrl" = "https://${var.key_vault_name}${local.key_vault_suffix}"
     "AzureAD:DefaultGraphScopes"   = local.default_delegated_permissions
     "WVD:AadTenantId"              = data.azurerm_client_config.current.tenant_id
     "WVD:SubscriptionId"           = data.azurerm_client_config.current.subscription_id
@@ -136,61 +140,84 @@ resource "null_resource" "download_package" {
       $ErrorActionPreference = 'Stop'
       $ProgressPreference    = 'SilentlyContinue'
 
-      # --- Get package download URL --------------------------------------- #
-      $version  = '${var.app_package_version}'
-      if ($version -eq 'latest') {
-          Write-Host "Resolving latest package version..."
-
-          $listUrl = "${var.maintenance_service_url}/api/package"
-          $packages = Invoke-RestMethod -Uri $listUrl -Method Get
-
-          if (-not $packages) {
-              throw "No packages returned from maintenance service"
-          }
-
-          $latestPackage = $packages |
-              Where-Object { $_.status -eq 2 -and $_.version } |
-              Sort-Object { [version]$_.version } -Descending |
-              Select-Object -First 1
-
-          if (-not $latestPackage) {
-              throw "No eligible package found with status GeneralAvailability"
-          }
-
-          $version = $latestPackage.version
-          Write-Host "Latest version resolved: $version"
-      }
-
-      $apiUrl   = '${var.maintenance_service_url}/api/package/' + $version + '/link?standalone=false'
-
-      Write-Host "Requesting package link from $apiUrl ..."
-      $response = Invoke-RestMethod -Uri $apiUrl -Method Post -ContentType 'application/json'
-      $packageUri = $response.packageUri
-
-      if ([string]::IsNullOrWhiteSpace($packageUri)) {
-          throw "Maintenance service returned empty packageUri"
-      }
-      Write-Host "Package URI received."
-
-      # --- Download package ------------------------------------------------ #
+      # --- Prepare temp directory ------------------------------------------ #
       $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) 'nmw_terraform_package'
       if (Test-Path $tempDir) { Remove-Item -Path $tempDir -Recurse -Force }
       New-Item -Path $tempDir -ItemType Directory | Out-Null
       $zipPath = Join-Path $tempDir 'package.zip'
 
-      Write-Host "Downloading package ..."
-      Invoke-WebRequest -Uri $packageUri -OutFile $zipPath
-      $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
-      Write-Host "Package downloaded: $sizeMB MB -> $zipPath"
+      $localPackagePath = '${replace(coalesce(var.app_package_local_path, ""), "'", "''")}'
+
+      if (-not [string]::IsNullOrWhiteSpace($localPackagePath)) {
+          # --- Offline install: use pre-downloaded local package ----------- #
+          # app_package_version is ignored; the maintenance service is not contacted.
+          if (-not (Test-Path -LiteralPath $localPackagePath)) {
+              throw "Local package not found at '$localPackagePath'"
+          }
+          Write-Host "Using local package: $localPackagePath (maintenance service skipped)"
+          Copy-Item -LiteralPath $localPackagePath -Destination $zipPath -Force
+      }
+      else {
+          # --- Get package download URL ------------------------------------ #
+          $version  = '${var.app_package_version}'
+          if ($version -eq 'latest') {
+              Write-Host "Resolving latest package version..."
+
+              $listUrl = "${var.maintenance_service_url}/api/package"
+              $packages = Invoke-RestMethod -Uri $listUrl -Method Get
+
+              if (-not $packages) {
+                  throw "No packages returned from maintenance service"
+              }
+
+              $latestPackage = $packages |
+                  Where-Object { $_.status -eq 2 -and $_.version } |
+                  Sort-Object { [version]$_.version } -Descending |
+                  Select-Object -First 1
+
+              if (-not $latestPackage) {
+                  throw "No eligible package found with status GeneralAvailability"
+              }
+
+              $version = $latestPackage.version
+              Write-Host "Latest version resolved: $version"
+          }
+
+          $apiUrl   = '${var.maintenance_service_url}/api/package/' + $version + '/link?standalone=false'
+
+          Write-Host "Requesting package link from $apiUrl ..."
+          $response = Invoke-RestMethod -Uri $apiUrl -Method Post -ContentType 'application/json'
+          $packageUri = $response.packageUri
+
+          if ([string]::IsNullOrWhiteSpace($packageUri)) {
+              throw "Maintenance service returned empty packageUri"
+          }
+          Write-Host "Package URI received."
+
+          # --- Download package -------------------------------------------- #
+          Write-Host "Downloading package into temporary file ..."
+          Invoke-WebRequest -Uri $packageUri -OutFile $zipPath
+          $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+          Write-Host "Package downloaded: $sizeMB MB -> $zipPath"
+      }
 
       # --- Extract package ------------------------------------------------- #
       Write-Host "Extracting package ..."
       Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
       Write-Host "Package extracted to $tempDir"
 
+      if(-not [string]::IsNullOrWhiteSpace($localPackagePath)){
+        # --- Validated extracted offline package --------------------------- #
+        # The package archive must contain app.zip and related deployment files.
+        $appZipPath = Join-Path $tempDir 'app.zip'
+        if (-not (Test-Path $appZipPath)) {
+            throw "app.zip not found after extraction. The package at $zipPath must be the NME package archive containing app.zip and related deployment files."
+        }
+      } 
+      
       # --- Remove downloaded zip ------------------------------------------- #
       Remove-Item -Path $zipPath -Force
-      Write-Host "Removed downloaded zip archive"
+      Write-Host "Removed temporary zip archive"
     EOT
   }
 }
@@ -207,15 +234,7 @@ resource "null_resource" "stop_webjobs" {
       $ProgressPreference    = 'SilentlyContinue'
 
       # --- Authenticate --------------------------------------------------- #
-      if ($env:ARM_CLIENT_SECRET) {
-          $securePassword = ConvertTo-SecureString $env:ARM_CLIENT_SECRET -AsPlainText -Force
-          $credential = New-Object System.Management.Automation.PSCredential($env:ARM_CLIENT_ID, $securePassword)
-          Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      elseif ($env:ARM_OIDC_TOKEN) {
-          Connect-AzAccount -ServicePrincipal -ApplicationId $env:ARM_CLIENT_ID -FederatedToken $env:ARM_OIDC_TOKEN -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      Set-AzContext -Subscription '${data.azurerm_client_config.current.subscription_id}' | Out-Null
+      . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
       # --- Stop all WebJobs ----------------------------------------------- #
       Write-Host "Stopping all WebJobs for '${var.web_app_portal_name}'..."
@@ -254,8 +273,6 @@ resource "null_resource" "stop_webjobs" {
     azurerm_storage_container.dp_locks,
     azuread_application.nme_app,
     azuread_service_principal.nme_app,
-    azuread_application_password.nme_app,
-    azurerm_key_vault_secret.azuread_client_secret,
     azurerm_key_vault_certificate.scripted_action_cert,
     azuread_application_certificate.scripted_action,
     azurerm_role_assignment.nme_sp_reader,
@@ -279,15 +296,7 @@ resource "null_resource" "deploy_package" {
       $ProgressPreference    = 'SilentlyContinue'
 
       # --- Authenticate --------------------------------------------------- #
-      if ($env:ARM_CLIENT_SECRET) {
-          $securePassword = ConvertTo-SecureString $env:ARM_CLIENT_SECRET -AsPlainText -Force
-          $credential = New-Object System.Management.Automation.PSCredential($env:ARM_CLIENT_ID, $securePassword)
-          Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      elseif ($env:ARM_OIDC_TOKEN) {
-          Connect-AzAccount -ServicePrincipal -ApplicationId $env:ARM_CLIENT_ID -FederatedToken $env:ARM_OIDC_TOKEN -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      Set-AzContext -Subscription '${data.azurerm_client_config.current.subscription_id}' | Out-Null
+      . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
       # --- Publish to Web App --------------------------------------------- #
       $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) 'nmw_terraform_package'
@@ -327,15 +336,7 @@ resource "null_resource" "start_webjobs" {
       $ProgressPreference    = 'SilentlyContinue'
 
       # --- Authenticate --------------------------------------------------- #
-      if ($env:ARM_CLIENT_SECRET) {
-          $securePassword = ConvertTo-SecureString $env:ARM_CLIENT_SECRET -AsPlainText -Force
-          $credential = New-Object System.Management.Automation.PSCredential($env:ARM_CLIENT_ID, $securePassword)
-          Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      elseif ($env:ARM_OIDC_TOKEN) {
-          Connect-AzAccount -ServicePrincipal -ApplicationId $env:ARM_CLIENT_ID -FederatedToken $env:ARM_OIDC_TOKEN -Tenant $env:ARM_TENANT_ID -Environment '${var.azure_environment}' | Out-Null
-      }
-      Set-AzContext -Subscription '${data.azurerm_client_config.current.subscription_id}' | Out-Null
+      . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
       # --- Start all WebJobs ---------------------------------------------- #
       Write-Host "Starting all WebJobs for '${var.web_app_portal_name}'..."

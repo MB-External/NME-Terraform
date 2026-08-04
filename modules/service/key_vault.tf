@@ -6,46 +6,10 @@ resource "azurerm_key_vault" "key_vault" {
   tenant_id = data.azurerm_client_config.current.tenant_id
   sku_name  = "standard"
 
-  # Allow current deploying principal to manage secrets
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    certificate_permissions = [
-       "Delete", "Create", "Get", "List", "Update",
-    ]
-
-    key_permissions = [
-       "Delete", "Create", "Get", "List", "Purge", "Recover", "Rotate", "GetRotationPolicy", "SetRotationPolicy"
-    ]
-
-    secret_permissions = [
-      "Delete", "Set", "Get", "List", 
-    ]
-  }
-
-  # Allow webapp principal to access secrets and keys
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = azurerm_windows_web_app.web_app_portal.identity[0].principal_id
-
-    key_permissions = [
-      "WrapKey",
-      "UnwrapKey",
-    ]
-
-    secret_permissions = [
-      "Get",
-      "List",
-      "Set",
-      "Delete",
-    ]
-  }
-
   enabled_for_deployment     = false
   soft_delete_retention_days = 90
   purge_protection_enabled   = false
-  rbac_authorization_enabled = false
+  rbac_authorization_enabled = true
 
   public_network_access_enabled = var.configure_private_endpoints ? false : true
 
@@ -66,17 +30,42 @@ resource "azurerm_key_vault" "key_vault" {
   )
 }
 
-resource "azurerm_key_vault_secret" "sql_connection_string" {
-  name         = "ConnectionStrings--DefaultConnection"
-  key_vault_id = azurerm_key_vault.key_vault.id
+# Allow current deploying principal to create the data protection key and secrets (data plane).
+resource "azurerm_role_assignment" "key_vault_deployer_crypto_officer" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
 
-  value = "Server=tcp:${var.sql_server_name}${local.sql_server_suffix},1433;Initial Catalog=${var.database_name};Persist Security Info=False;User ID=${azuread_application.nme_app.client_id};Password=${azuread_application_password.nme_app.value};MultipleActiveResultSets=False;Authentication=Active Directory Service Principal;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+resource "azurerm_role_assignment" "key_vault_deployer_secrets_officer" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
 
-  depends_on = [
-    azurerm_mssql_database.database,
-    azuread_application_password.nme_app,
-    null_resource.wait_for_key_vault_private_dns,
-  ]
+resource "azurerm_role_assignment" "key_vault_deployer_certificates_officer" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Certificates Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# Allow webapp principal to access secrets, keys, and certificates (data plane).
+resource "azurerm_role_assignment" "key_vault_webapp_secrets_officer" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = azurerm_windows_web_app.web_app_portal.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "key_vault_webapp_crypto_user" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Crypto User"
+  principal_id         = azurerm_windows_web_app.web_app_portal.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "key_vault_webapp_certificate_user" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Certificate User"
+  principal_id         = azurerm_windows_web_app.web_app_portal.identity[0].principal_id
 }
 
 resource "azurerm_key_vault_key" "data_protection" {
@@ -91,6 +80,7 @@ resource "azurerm_key_vault_key" "data_protection" {
   ]
 
   depends_on = [
+    azurerm_role_assignment.key_vault_deployer_crypto_officer,
     null_resource.wait_for_key_vault_private_dns,
   ]
 }
@@ -104,6 +94,7 @@ resource "azurerm_key_vault_secret" "data_protection_storage_path" {
   value = "https://${azurerm_storage_account.data_protection.name}.blob${local.storage_suffix}/${azurerm_storage_container.dp_keys.name}/${var.data_protection_keys_blob_name}?${trimprefix(data.azurerm_storage_account_sas.dp_keys_sas.sas, "?")}"
 
   depends_on = [
+    azurerm_role_assignment.key_vault_deployer_secrets_officer,
     azurerm_storage_container.dp_keys,
     null_resource.wait_for_key_vault_private_dns,
   ]
@@ -117,6 +108,7 @@ resource "azurerm_key_vault_secret" "deployment_locks_container_sas_url" {
   value = "https://${azurerm_storage_account.data_protection.name}.blob${local.storage_suffix}/${azurerm_storage_container.dp_locks.name}?${trimprefix(data.azurerm_storage_account_sas.dp_locks_sas.sas, "?")}"
 
   depends_on = [
+    azurerm_role_assignment.key_vault_deployer_secrets_officer,
     azurerm_storage_container.dp_locks,
     null_resource.wait_for_key_vault_private_dns,
   ]

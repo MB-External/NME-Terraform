@@ -203,26 +203,6 @@ resource "azuread_service_principal" "nme_app" {
 }
 
 # --------------------------------------------------------------------------- #
-# Application Password (Client Secret) + store in Key Vault
-# --------------------------------------------------------------------------- #
-resource "azuread_application_password" "nme_app" {
-  application_id = azuread_application.nme_app.id
-  display_name   = "Terraform-managed secret"
-  end_date = timeadd(timestamp(), "87600h")  # ~10 years, matching script behaviour
-}
-
-resource "azurerm_key_vault_secret" "azuread_client_secret" {
-  name         = "AzureAD--ClientSecret"
-  key_vault_id = azurerm_key_vault.key_vault.id
-  value        = azuread_application_password.nme_app.value
-
-  depends_on = [
-    azurerm_key_vault.key_vault,
-    null_resource.wait_for_key_vault_private_dns,
-  ]
-}
-
-# --------------------------------------------------------------------------- #
 # Key Vault Certificate for Scripted Actions
 # --------------------------------------------------------------------------- #
 resource "azurerm_key_vault_certificate" "scripted_action_cert" {
@@ -267,9 +247,63 @@ resource "azurerm_key_vault_certificate" "scripted_action_cert" {
 
   depends_on = [
     azurerm_key_vault.key_vault,
+    azurerm_role_assignment.key_vault_deployer_certificates_officer,
     null_resource.wait_for_key_vault_private_dns,
   ]
 }
+
+# --------------------------------------------------------------------------- #
+# Self-signed certificate for Azure AD app authentication
+# Used by the webapp for features that do not support Managed Identity auth.
+# --------------------------------------------------------------------------- #
+resource "azurerm_key_vault_certificate" "app_auth_cert" {
+  name         = var.app_cert_name
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  certificate_policy {
+    issuer_parameters {
+      name = "Self"
+    }
+
+    key_properties {
+      exportable = true
+      key_type   = "RSA"
+      key_size   = 2048
+      reuse_key  = true
+    }
+
+    secret_properties {
+      content_type = "application/x-pkcs12"
+    }
+
+    x509_certificate_properties {
+      subject            = "CN=${var.app_cert_name}"
+      validity_in_months = var.app_cert_lifetime_months
+
+      key_usage = [
+        "digitalSignature",
+        "keyEncipherment",
+      ]
+    }
+
+    lifetime_action {
+      action {
+        action_type = "AutoRenew"
+      }
+      trigger {
+        days_before_expiry = 30
+      }
+    }
+  }
+
+  depends_on = [
+    azurerm_key_vault.key_vault,
+    azurerm_role_assignment.key_vault_deployer_certificates_officer,
+    null_resource.wait_for_key_vault_private_dns,
+  ]
+}
+
+
 
 # --------------------------------------------------------------------------- #
 # Application Certificate Credential (attach KV cert to AD app)
@@ -282,16 +316,28 @@ resource "azuread_application_certificate" "scripted_action" {
 }
 
 # --------------------------------------------------------------------------- #
-# Key Vault Access Policy – NME App Service Principal
+# Application Certificate Credential – App Auth (for non-MI features)
 # --------------------------------------------------------------------------- #
-resource "azurerm_key_vault_access_policy" "nme_app_sp" {
-  key_vault_id = azurerm_key_vault.key_vault.id
+resource "azuread_application_certificate" "app_auth" {
+  application_id = azuread_application.nme_app.id
+  type           = "AsymmetricX509Cert"
+  value          = azurerm_key_vault_certificate.app_auth_cert.certificate_data_base64
+  end_date       = azurerm_key_vault_certificate.app_auth_cert.certificate_attribute[0].expires
+}
 
-  tenant_id = data.azurerm_client_config.current.tenant_id
-  object_id = azuread_service_principal.nme_app.object_id
+# --------------------------------------------------------------------------- #
+# Key Vault RBAC Role Assignments – NME App Service Principal
+# --------------------------------------------------------------------------- #
+resource "azurerm_role_assignment" "nme_app_sp_secrets_user" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azuread_service_principal.nme_app.object_id
+}
 
-  secret_permissions = ["Get", "List"]
-  certificate_permissions = ["Get", "List", "Create"]
+resource "azurerm_role_assignment" "nme_app_sp_certificates_officer" {
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Certificates Officer"
+  principal_id         = azuread_service_principal.nme_app.object_id
 }
 
 # --------------------------------------------------------------------------- #

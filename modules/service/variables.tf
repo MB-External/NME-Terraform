@@ -198,6 +198,17 @@ variable "app_package_version" {
   default     = "latest"
 }
 
+variable "app_package_local_path" {
+  description = "Absolute path to a pre-downloaded NME application package .zip on the machine running Terraform. When set, the maintenance service is not contacted (offline/disconnected install) and app_package_version is ignored. The package archive must contain app.zip and related deployment files."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.app_package_local_path == null || can(regex("(?i)\\.zip$", trimspace(var.app_package_local_path)))
+    error_message = "app_package_local_path must point to a .zip file."
+  }
+}
+
 variable "app_role_assignments" {
   description = "Map of app role names to lists of user principal names to assign"
   type        = map(list(string))
@@ -212,4 +223,21 @@ variable "private_endpoint_post_resolve_delay" {
     condition     = var.private_endpoint_post_resolve_delay >= 0 && floor(var.private_endpoint_post_resolve_delay) == var.private_endpoint_post_resolve_delay
     error_message = "private_endpoint_post_resolve_delay must be a non-negative whole number of seconds (e.g. 0, 30, 60)."
   }  
+}
+
+variable "app_cert_name" {
+  description = "Name of the self-signed certificate in Key Vault used for Azure AD app authentication (for features that do not support Managed Identity)"
+  type        = string
+  default     = "nme-app-cert"
+}
+
+variable "app_cert_lifetime_months" {
+  description = "Validity period in months for the Azure AD app authentication certificate"
+  type        = number
+  default     = 4
+
+  validation {
+    condition     = var.app_cert_lifetime_months >= 1 && var.app_cert_lifetime_months <= 297 && floor(var.app_cert_lifetime_months) == var.app_cert_lifetime_months
+    error_message = "app_cert_lifetime_months must be a whole number between 1 and 297 (Key Vault supported range)."
+  }
 }

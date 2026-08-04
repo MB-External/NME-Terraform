@@ -46,6 +46,15 @@ data_protection_keys_blob_name = "keys-{unique_suffix}.xml"
 data_protection_key_name = "DataProtection-{unique_suffix}"
 
 # -----------------
+# Certificate
+# -----------------
+
+# Self-signed certificate in Key Vault for Azure AD app authentication
+# (used for features that do not support Managed Identity)
+app_cert_name            = "nme-app-cert"
+app_cert_lifetime_months = 4  # ~120 days; key is reused on renewal
+
+# -----------------
 # Networking
 # -----------------
 
