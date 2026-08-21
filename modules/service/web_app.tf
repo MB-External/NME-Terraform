@@ -469,7 +469,7 @@ resource "azurerm_private_dns_zone" "app_service" {
 
 resource "azurerm_private_dns_zone_virtual_network_link" "app_service" {
   count                = local.link_dns_zones ? 1 : 0
-  name                 = "${var.network_config.vnet_name}-link"
+  name                 = "${local.virtual_network_name}-link"
   private_dns_zone_id  = local.app_service_dns_zone_id
   virtual_network_id   = local.virtual_network_id
   tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})

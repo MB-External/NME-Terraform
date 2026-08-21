@@ -69,7 +69,7 @@ data "azurerm_virtual_network" "deployment_vnet" {
 
 resource "azurerm_virtual_network_peering" "deployment_to_private" {
   count                        = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
-  name                         = "deployment-to-private-${var.network_config.vnet_name}"
+  name                         = "deployment-to-private-${local.virtual_network_name}"
   resource_group_name          = var.deployment_resource_group_name
   virtual_network_name         = data.azurerm_virtual_network.deployment_vnet[0].name
   remote_virtual_network_id    = local.virtual_network_id
@@ -78,7 +78,7 @@ resource "azurerm_virtual_network_peering" "deployment_to_private" {
 
 resource "azurerm_virtual_network_peering" "private_to_deployment" {
   count                        = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
-  name                         = "private-to-deployment-${var.network_config.vnet_name}"
+  name                         = "private-to-deployment-${local.virtual_network_name}"
   resource_group_name          = var.resource_group_name
   virtual_network_name         = azurerm_virtual_network.private_endpoints_vnet[0].name
   remote_virtual_network_id    = local.virtual_network_id
