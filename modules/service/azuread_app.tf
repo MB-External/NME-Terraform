@@ -1,5 +1,5 @@
-locals{
-    # Graph API permissions - Delegated
+locals {
+  # Graph API permissions - Delegated
   default_delegated_permissions = "User.Read|User.ReadBasic.All|User.Read.All|GroupMember.Read.All|Application.Read.All|Organization.Read.All"
 
   app_role_id_map = {
@@ -25,7 +25,7 @@ locals{
   role_assignments_map = { for ra in local.flat_role_assignments : ra.key => ra }
 
   # Unique user identifiers to look up (avoids duplicate data source reads)
-  unique_role_assignee_users = toset(flatten(values(var.app_role_assignments)))  
+  unique_role_assignee_users = toset(flatten(values(var.app_role_assignments)))
 }
 
 # --------------------------------------------------------------------------- #

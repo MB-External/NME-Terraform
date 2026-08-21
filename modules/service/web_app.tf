@@ -37,9 +37,9 @@ resource "azurerm_windows_web_app" "web_app_portal" {
   service_plan_id     = azurerm_service_plan.app_service_plan.id
 
   public_network_access_enabled = (var.configure_private_endpoints && var.private_web_app) ? false : true
-  virtual_network_subnet_id = local.app_subnet_id
+  virtual_network_subnet_id     = local.app_subnet_id
 
-  https_only = true
+  https_only              = true
   client_affinity_enabled = true
 
   identity {
@@ -89,24 +89,24 @@ resource "azurerm_windows_web_app" "web_app_portal" {
     "DataProtection:Protect:KeyIdentifier" = "https://${var.key_vault_name}${local.key_vault_suffix}/keys/${var.data_protection_key_name}"
 
     # SQL
-    "Deployment:SqlServerId" = local.sql_server_resource_id
+    "Deployment:SqlServerId"              = local.sql_server_resource_id
     "ConnectionStrings:DefaultConnection" = "Server=tcp:${var.sql_server_name}${local.sql_server_suffix},1433;Initial Catalog=${var.database_name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;"
 
     # Azure AD / NME application (previously set by install-az.ps1)
-    "RoleAuthorization:Enabled"    = "True"
-    "Features:CumulativeRbac"      = "True"
-    "AzureAD:ClientId"             = azuread_application.nme_app.client_id
-    "AzureAD:TenantId"             = data.azurerm_client_config.current.tenant_id
-    "AzureAD:ClientCertificates:0:SourceType" = "KeyVault"
-    "AzureAD:ClientCertificates:0:KeyVaultCertificateName" = var.app_cert_name
-    "AzureAD:ClientCertificates:0:KeyVaultUrl" = "https://${var.key_vault_name}${local.key_vault_suffix}"
-    "AzureAD:DefaultGraphScopes"   = local.default_delegated_permissions
-    "WVD:AadTenantId"              = data.azurerm_client_config.current.tenant_id
-    "WVD:SubscriptionId"           = data.azurerm_client_config.current.subscription_id
-    "Billing:Mode"                 = "MAU"
-    "Artifacts:Mode"               = "Local"
-    "Deployment:FallbackOptions:DefaultLocalAdmin:DisableAccount"  = "True"
-    "Deployment:FallbackOptions:DefaultLocalAdmin:RandomPassword"  = "True"
+    "RoleAuthorization:Enabled"                                   = "True"
+    "Features:CumulativeRbac"                                     = "True"
+    "AzureAD:ClientId"                                            = azuread_application.nme_app.client_id
+    "AzureAD:TenantId"                                            = data.azurerm_client_config.current.tenant_id
+    "AzureAD:ClientCertificates:0:SourceType"                     = "KeyVault"
+    "AzureAD:ClientCertificates:0:KeyVaultCertificateName"        = var.app_cert_name
+    "AzureAD:ClientCertificates:0:KeyVaultUrl"                    = "https://${var.key_vault_name}${local.key_vault_suffix}"
+    "AzureAD:DefaultGraphScopes"                                  = local.default_delegated_permissions
+    "WVD:AadTenantId"                                             = data.azurerm_client_config.current.tenant_id
+    "WVD:SubscriptionId"                                          = data.azurerm_client_config.current.subscription_id
+    "Billing:Mode"                                                = "MAU"
+    "Artifacts:Mode"                                              = "Local"
+    "Deployment:FallbackOptions:DefaultLocalAdmin:DisableAccount" = "True"
+    "Deployment:FallbackOptions:DefaultLocalAdmin:RandomPassword" = "True"
 
     # Deploy
     #WEBSITE_RUN_FROM_PACKAGE = 1
@@ -448,21 +448,19 @@ resource "azurerm_private_dns_zone" "app_service" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "app_service" {
-  count                 = var.configure_private_endpoints ? 1 : 0
-  name                  = "${var.network_config.vnet_name}-link"
-  resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.app_service[0].name
-  virtual_network_id    = azurerm_virtual_network.private_endpoints_vnet[0].id
-  tags                  = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
-  registration_enabled  = false
+  count                = var.configure_private_endpoints ? 1 : 0
+  name                 = "${var.network_config.vnet_name}-link"
+  private_dns_zone_id  = azurerm_private_dns_zone.app_service[0].id
+  virtual_network_id   = azurerm_virtual_network.private_endpoints_vnet[0].id
+  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  registration_enabled = false
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "app_service_deployment" {
-  count                 = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
-  name                  = "${var.deployment_vnet_name}-deployment-link"
-  resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.app_service[0].name
-  virtual_network_id    = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                  = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
-  registration_enabled  = false
+  count                = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
+  name                 = "${var.deployment_vnet_name}-deployment-link"
+  private_dns_zone_id  = azurerm_private_dns_zone.app_service[0].id
+  virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
+  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  registration_enabled = false
 }

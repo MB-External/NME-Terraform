@@ -5,7 +5,7 @@ resource "azurerm_virtual_network" "private_endpoints_vnet" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  address_space = [ var.network_config.vnet_cidr ]
+  address_space = [var.network_config.vnet_cidr]
   tags = lookup(
     var.tags_by_resource,
     "Microsoft.Network/virtualNetworks",
@@ -19,7 +19,7 @@ resource "azurerm_subnet" "private_endpoints" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.private_endpoints_vnet[0].name
 
-  address_prefixes = [ var.network_config.pe_subnet_cidr ]
+  address_prefixes                  = [var.network_config.pe_subnet_cidr]
   private_endpoint_network_policies = "RouteTableEnabled"
 }
 
@@ -29,15 +29,17 @@ resource "azurerm_subnet" "app" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.private_endpoints_vnet[0].name
 
-  address_prefixes = [ var.network_config.app_subnet_cidr ]
+  address_prefixes = [var.network_config.app_subnet_cidr]
   delegation {
     name = "serverFarmsDelegation"
     service_delegation {
-      name = "Microsoft.Web/serverFarms"
+      name    = "Microsoft.Web/serverFarms"
       actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
     }
   }
-  service_endpoints = [ "Microsoft.KeyVault" ]
+  service_endpoint {
+    service = "Microsoft.KeyVault"
+  }
   private_endpoint_network_policies = "RouteTableEnabled"
 }
 

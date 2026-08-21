@@ -70,14 +70,14 @@ variable "configure_private_endpoints" {
 
 variable "deployment_vnet_name" {
   description = "VNet from which TF deployment is executed. Required when configure_private_endpoints = true."
-  type    = string
-  default = null
+  type        = string
+  default     = null
 }
 
 variable "deployment_resource_group_name" {
   description = "Resource group from which TF deployment is executed. Required when configure_private_endpoints = true."
-  type    = string
-  default = null
+  type        = string
+  default     = null
 }
 
 variable "network_config" {

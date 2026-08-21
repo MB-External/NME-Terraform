@@ -59,8 +59,8 @@ variable "configure_private_endpoints" {
 
 variable "deployment_vnet_name" {
   description = "VNet from which Terraform deployment will be executed. Required when configure_private_endpoints = true."
-  type    = string
-  default = null
+  type        = string
+  default     = null
 
   validation {
     condition     = var.configure_private_endpoints == false || var.deployment_vnet_name != null
@@ -70,8 +70,8 @@ variable "deployment_vnet_name" {
 
 variable "deployment_resource_group_name" {
   description = "Resource group of the deployment VNet. Required when configure_private_endpoints = true."
-  type    = string
-  default = null
+  type        = string
+  default     = null
 
   validation {
     condition     = var.configure_private_endpoints == false || var.deployment_resource_group_name != null
@@ -161,7 +161,7 @@ variable "data_protection_storage_account_name" {
 variable "data_protection_key_name" {
   description = "Name of the Data Protection Key"
   type        = string
-  default = "DataProtection-main"
+  default     = "DataProtection-main"
 }
 
 variable "maintenance_service_url" {
@@ -222,7 +222,7 @@ variable "private_endpoint_post_resolve_delay" {
   validation {
     condition     = var.private_endpoint_post_resolve_delay >= 0 && floor(var.private_endpoint_post_resolve_delay) == var.private_endpoint_post_resolve_delay
     error_message = "private_endpoint_post_resolve_delay must be a non-negative whole number of seconds (e.g. 0, 30, 60)."
-  }  
+  }
 }
 
 variable "app_cert_name" {

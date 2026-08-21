@@ -1,12 +1,12 @@
 locals {
   cloud_config = {
     AzureCloud = {
-      sql_server_suffix       = "database.windows.net"
-      key_vault_suffix        = "vault.azure.net"
-      storage_suffix          = "core.windows.net"
-      web_app_suffix          = "azurewebsites.net"
+      sql_server_suffix = "database.windows.net"
+      key_vault_suffix  = "vault.azure.net"
+      storage_suffix    = "core.windows.net"
+      web_app_suffix    = "azurewebsites.net"
 
-      azuread_instance        = "https://login.microsoftonline.com/"
+      azuread_instance = "https://login.microsoftonline.com/"
 
       sql_private_dns         = "privatelink.database.windows.net"
       blob_private_dns        = "privatelink.blob.core.windows.net"
@@ -16,12 +16,12 @@ locals {
       automation_private_dns  = "privatelink.azure-automation.net"
     }
     AzureUSGovernment = {
-      sql_server_suffix       = "database.usgovcloudapi.net"
-      key_vault_suffix        = "vault.usgovcloudapi.net"
-      storage_suffix          = "core.usgovcloudapi.net"
-      web_app_suffix          = "azurewebsites.us"
+      sql_server_suffix = "database.usgovcloudapi.net"
+      key_vault_suffix  = "vault.usgovcloudapi.net"
+      storage_suffix    = "core.usgovcloudapi.net"
+      web_app_suffix    = "azurewebsites.us"
 
-      azuread_instance        = "https://login.microsoftonline.us/"
+      azuread_instance = "https://login.microsoftonline.us/"
 
       sql_private_dns         = "privatelink.database.usgovcloudapi.net"
       blob_private_dns        = "privatelink.blob.core.usgovcloudapi.net"
@@ -31,12 +31,12 @@ locals {
       automation_private_dns  = "privatelink.azure-automation.us"
     }
     AzureChinaCloud = {
-      sql_server_suffix       = "database.chinacloudapi.cn"
-      key_vault_suffix        = "vault.azure.cn"
-      storage_suffix          = "core.chinacloudapi.cn"
-      web_app_suffix          = "chinacloudsites.cn"
+      sql_server_suffix = "database.chinacloudapi.cn"
+      key_vault_suffix  = "vault.azure.cn"
+      storage_suffix    = "core.chinacloudapi.cn"
+      web_app_suffix    = "chinacloudsites.cn"
 
-      azuread_instance        = "https://login.chinacloudapi.cn/"
+      azuread_instance = "https://login.chinacloudapi.cn/"
 
       sql_private_dns         = "privatelink.database.chinacloudapi.cn"
       blob_private_dns        = "privatelink.blob.core.chinacloudapi.cn"
@@ -55,10 +55,10 @@ locals {
   web_app_suffix    = ".${local._env.web_app_suffix}"
 
   database_scope = "https://${local._env.sql_server_suffix}"
-  web_app_url =  "https://${var.web_app_portal_name}${local.web_app_suffix}/"
-  login_url   = "${local.web_app_url}signin-oidc"
-  logout_url  = "${local.web_app_url}signout-oidc"
-  
+  web_app_url    = "https://${var.web_app_portal_name}${local.web_app_suffix}/"
+  login_url      = "${local.web_app_url}signin-oidc"
+  logout_url     = "${local.web_app_url}signout-oidc"
+
   azuread_instance = local._env.azuread_instance
 
   sql_private_dns_zone_name         = local._env.sql_private_dns

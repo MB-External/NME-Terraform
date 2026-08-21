@@ -4,7 +4,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.110.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -24,11 +24,11 @@ module "service" {
 
   resource_group_name = azurerm_resource_group.core.name
 
-  azuread_app_name                     = var.azuread_app_name
-  azure_environment                    = var.azure_environment
-  subscription_display_name            = var.subscription_display_name
+  azuread_app_name          = var.azuread_app_name
+  azure_environment         = var.azure_environment
+  subscription_display_name = var.subscription_display_name
 
-  location = azurerm_resource_group.core.location
+  location          = azurerm_resource_group.core.location
   protect_resources = var.protect_resources
 
   # (keep passing through the rest as you already do)
@@ -60,7 +60,7 @@ module "service" {
   app_package_version                  = var.app_package_version
   app_package_local_path               = var.app_package_local_path
   app_role_assignments                 = var.app_role_assignments
-  private_endpoint_post_resolve_delay   = var.private_endpoint_post_resolve_delay
-  app_cert_name                         = var.app_cert_name
-  app_cert_lifetime_months              = var.app_cert_lifetime_months
+  private_endpoint_post_resolve_delay  = var.private_endpoint_post_resolve_delay
+  app_cert_name                        = var.app_cert_name
+  app_cert_lifetime_months             = var.app_cert_lifetime_months
 }

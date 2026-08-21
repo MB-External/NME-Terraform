@@ -17,11 +17,11 @@ resource "azuread_app_role_assignment" "sql_directory_read_all" {
 }
 
 resource "azurerm_mssql_server" "sql_server" {
-  name                         = var.sql_server_name
-  resource_group_name          = var.resource_group_name
-  location                     = var.location
-  version                      = "12.0"
-  minimum_tls_version          = "1.2"
+  name                          = var.sql_server_name
+  resource_group_name           = var.resource_group_name
+  location                      = var.location
+  version                       = "12.0"
+  minimum_tls_version           = "1.2"
   public_network_access_enabled = var.configure_private_endpoints ? false : true
 
   azuread_administrator {
@@ -48,10 +48,10 @@ resource "azurerm_mssql_server" "sql_server" {
 }
 
 resource "azurerm_mssql_database" "database" {
-  name           = var.database_name
-  server_id     = azurerm_mssql_server.sql_server.id
-  collation     = var.sql_collation
-  max_size_gb   = var.database_max_size_gb
+  name        = var.database_name
+  server_id   = azurerm_mssql_server.sql_server.id
+  collation   = var.sql_collation
+  max_size_gb = var.database_max_size_gb
 
   sku_name = var.database_sku_name
 
@@ -101,23 +101,21 @@ resource "azurerm_private_dns_zone" "sql" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
-  count                 = var.configure_private_endpoints ? 1 : 0
-  name                  = "${var.network_config.vnet_name}-link"
-  resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.sql[0].name
-  virtual_network_id    = azurerm_virtual_network.private_endpoints_vnet[0].id
-  tags                  = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
-  registration_enabled  = false
+  count                = var.configure_private_endpoints ? 1 : 0
+  name                 = "${var.network_config.vnet_name}-link"
+  private_dns_zone_id  = azurerm_private_dns_zone.sql[0].id
+  virtual_network_id   = azurerm_virtual_network.private_endpoints_vnet[0].id
+  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  registration_enabled = false
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "sql_deployment" {
-  count                 = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
-  name                  = "${var.deployment_vnet_name}-deployment-link"
-  resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.sql[0].name
-  virtual_network_id    = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                  = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
-  registration_enabled  = false
+  count                = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
+  name                 = "${var.deployment_vnet_name}-deployment-link"
+  private_dns_zone_id  = azurerm_private_dns_zone.sql[0].id
+  virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
+  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  registration_enabled = false
 }
 
 resource "azurerm_private_endpoint" "sql_server" {
@@ -143,10 +141,10 @@ resource "azurerm_private_endpoint" "sql_server" {
 
 resource "null_resource" "sql_user_setup" {
   triggers = {
-    sp_id       = azuread_service_principal.nme_app.object_id
-    sp_name     = azuread_service_principal.nme_app.display_name
-    sql_server  = azurerm_mssql_server.sql_server.fully_qualified_domain_name
-    database    = azurerm_mssql_database.database.name
+    sp_id      = azuread_service_principal.nme_app.object_id
+    sp_name    = azuread_service_principal.nme_app.display_name
+    sql_server = azurerm_mssql_server.sql_server.fully_qualified_domain_name
+    database   = azurerm_mssql_database.database.name
   }
 
   provisioner "local-exec" {
