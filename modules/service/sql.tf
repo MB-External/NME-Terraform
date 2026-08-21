@@ -1,4 +1,5 @@
 data "azuread_service_principal" "current" {
+  count = var.sql_azuread_administrator == null ? 1 : 0
   client_id = data.azurerm_client_config.current.client_id
 }
 
@@ -25,9 +26,9 @@ resource "azurerm_mssql_server" "sql_server" {
   public_network_access_enabled = var.configure_private_endpoints ? false : true
 
   azuread_administrator {
-    login_username              = data.azuread_service_principal.current.display_name
-    object_id                   = data.azurerm_client_config.current.client_id
-    tenant_id                   = data.azurerm_client_config.current.tenant_id
+    login_username              = var.sql_azuread_administrator == null ? data.azuread_service_principal.current[0].display_name : var.sql_azuread_administrator.login_username
+    object_id                   = var.sql_azuread_administrator == null ? data.azuread_service_principal.current[0].client_id : var.sql_azuread_administrator.object_id
+    tenant_id                   = var.sql_azuread_administrator == null ? data.azurerm_client_config.current.tenant_id : var.sql_azuread_administrator.tenant_id
     azuread_authentication_only = true
   }
 

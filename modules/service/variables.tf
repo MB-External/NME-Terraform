@@ -164,6 +164,16 @@ variable "database_name" {
   type        = string
 }
 
+variable "sql_azuread_administrator" {
+  description = "Azure AD administrator for SQL Server, uses the current service principal if not specified"
+  type = object({
+    login_username              = string
+    object_id                   = string
+    tenant_id                   = string
+  })
+  default = null
+}
+
 variable "key_vault_name" {
   description = "Key Vault resource name override"
   type        = string
