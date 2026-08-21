@@ -92,8 +92,43 @@ variable "network_config" {
   default = null
 
   validation {
-    condition     = var.configure_private_endpoints == false || var.network_config != null
-    error_message = "network_config is required when configure_private_endpoints is true."
+    condition     = var.configure_private_endpoints == false || (var.network_config != null || var.existing_network_config != null)
+    error_message = "network_config or existing_network_config is required when configure_private_endpoints is true"
+  }
+  validation {
+    condition     = var.configure_private_endpoints == false || (var.network_config == null || var.existing_network_config == null)
+    error_message = "only one of network_config or existing_network_config should be provided when configure_private_endpoints is true"
+  }
+}
+
+variable "existing_network_config" {
+  description = "Existing network configuration for private endpoints. Required when configure_private_endpoints = true and network_config is not provided."
+  type = object({
+    vnet_name        = string
+    pe_subnet_name   = string
+    app_subnet_name  = string
+    resource_group_name = string
+    manage_dns       = optional(bool, true)
+    create_dns_zones = optional(bool, true)
+    link_dns_zones   = optional(bool, true)
+    dns_zone_ids = optional(object({
+      sql             = string
+      data_protection = string
+      automation      = string
+    }))
+  })
+  default = null
+  validation {
+    condition     = var.existing_network_config == null || var.existing_network_config.manage_dns == false || var.existing_network_config.create_dns_zones == true || var.existing_network_config.dns_zone_ids != null
+    error_message = "dns_zone_ids must be specified if manage_dns is true and create_dns_zones is false"
+  }
+  validation {
+    condition     = var.existing_network_config == null || var.existing_network_config.create_dns_zones == false || var.existing_network_config.dns_zone_ids == null
+    error_message = "dns_zone_ids should not be specified when create_dns_zones is true"
+  }
+  validation {
+    condition     = var.existing_network_config == null || var.existing_network_config.manage_dns == true || (var.existing_network_config.create_dns_zones == false && var.existing_network_config.link_dns_zones == false && var.existing_network_config.dns_zone_ids == null)
+    error_message = "create_dns_zones, link_dns_zones, and dns_zone_ids are only applicable when manage_dns is true"
   }
 }
 

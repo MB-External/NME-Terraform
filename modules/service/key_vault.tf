@@ -115,32 +115,32 @@ resource "azurerm_key_vault_secret" "deployment_locks_container_sas_url" {
 }
 
 resource "azurerm_private_dns_zone" "key_vault" {
-  count               = var.configure_private_endpoints ? 1 : 0
+  count               = local.create_dns_zones ? 1 : 0
   name                = local.key_vault_private_dns_zone_name
   resource_group_name = var.resource_group_name
   tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {})
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
-  count                = var.configure_private_endpoints ? 1 : 0
+  count                = local.link_dns_zones ? 1 : 0
   name                 = "${var.network_config.vnet_name}-link"
-  private_dns_zone_id  = azurerm_private_dns_zone.key_vault[0].id
-  virtual_network_id   = azurerm_virtual_network.private_endpoints_vnet[0].id
+  private_dns_zone_id  = local.key_vault_dns_zone_id
+  virtual_network_id   = local.virtual_network_id
   tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
   registration_enabled = false
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "key_vault_deployment" {
-  count                = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
+  count                = local.link_dns_zones && var.deployment_vnet_name != null ? 1 : 0
   name                 = "${var.deployment_vnet_name}-deployment-link"
-  private_dns_zone_id  = azurerm_private_dns_zone.key_vault[0].id
+  private_dns_zone_id  = local.key_vault_dns_zone_id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
   tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
   registration_enabled = false
 }
 
 resource "azurerm_private_endpoint" "key_vault" {
-  count               = var.configure_private_endpoints ? 1 : 0
+  count               = local.deploy_private_endpoint_managed_dns ? 1 : 0
   name                = "${var.key_vault_name}-pe"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -158,4 +158,24 @@ resource "azurerm_private_endpoint" "key_vault" {
     name                 = "default"
     private_dns_zone_ids = [azurerm_private_dns_zone.key_vault[0].id]
   }
+}
+
+resource "azurerm_private_endpoint" "key_vault_unmanaged_dns" {
+  count               = local.deploy_private_endpoint_unmanaged_dns ? 1 : 0
+  name                = "${var.key_vault_name}-pe"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = local.private_endpoints_subnet_id
+  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+
+  private_service_connection {
+    name                           = "${var.key_vault_name}-pls"
+    private_connection_resource_id = azurerm_key_vault.key_vault.id
+    is_manual_connection           = false
+    subresource_names              = ["vault"]
+  }
+
+lifecycle {
+  ignore_changes = [ private_dns_zone_group ]
+}
 }

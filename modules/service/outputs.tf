@@ -182,22 +182,22 @@ output "scripted_action_account_name" {
 # Network outputs (conditional based on private endpoints)
 output "private_endpoints_vnet_id" {
   description = "The ID of the Private Endpoints Virtual Network"
-  value       = var.configure_private_endpoints ? azurerm_virtual_network.private_endpoints_vnet[0].id : null
+  value       = var.configure_private_endpoints ? local.virtual_network_id : null
 }
 
 output "private_endpoints_vnet_name" {
   description = "The name of the Private Endpoints Virtual Network"
-  value       = var.configure_private_endpoints ? azurerm_virtual_network.private_endpoints_vnet[0].name : null
+  value       = var.configure_private_endpoints ? local.virtual_network_name : null
 }
 
 output "private_endpoints_subnet_id" {
   description = "The ID of the Private Endpoints Subnet"
-  value       = var.configure_private_endpoints ? azurerm_subnet.private_endpoints[0].id : null
+  value       = var.configure_private_endpoints ? local.private_endpoints_subnet_id : null
 }
 
 output "app_subnet_id" {
   description = "The ID of the App Subnet"
-  value       = var.configure_private_endpoints ? azurerm_subnet.app[0].id : null
+  value       = var.configure_private_endpoints ? local.app_subnet_id : null
 }
 
 # Data Collection outputs
