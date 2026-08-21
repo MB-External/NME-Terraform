@@ -8,6 +8,12 @@ variable "azuread_app_name" {
   type        = string
 }
 
+variable "azuread_app_owners" {
+  description = "List of Azure AD user principals to assign as owners of the Azure AD application"
+  type        = list(string)
+  default     = []
+}
+
 variable "location" {
   description = "Location for all resources"
   type        = string
@@ -63,7 +69,7 @@ variable "deployment_vnet_name" {
   default     = null
 
   validation {
-    condition     = var.configure_private_endpoints == false || var.deployment_vnet_name != null
+    condition     = var.configure_private_endpoints == false || var.existing_network_config != null || var.deployment_vnet_name != null
     error_message = "deployment_vnet_name is required when configure_private_endpoints is true."
   }
 }
@@ -74,7 +80,7 @@ variable "deployment_resource_group_name" {
   default     = null
 
   validation {
-    condition     = var.configure_private_endpoints == false || var.deployment_resource_group_name != null
+    condition     = var.configure_private_endpoints == false || var.existing_network_config != null || var.deployment_resource_group_name != null
     error_message = "deployment_resource_group_name is required when configure_private_endpoints is true."
   }
 }
@@ -104,13 +110,13 @@ variable "network_config" {
 variable "existing_network_config" {
   description = "Existing network configuration for private endpoints. Required when configure_private_endpoints = true and network_config is not provided."
   type = object({
-    vnet_name        = string
-    pe_subnet_name   = string
-    app_subnet_name  = string
+    vnet_name           = string
+    pe_subnet_name      = string
+    app_subnet_name     = string
     resource_group_name = string
-    manage_dns       = optional(bool, true)
-    create_dns_zones = optional(bool, true)
-    link_dns_zones   = optional(bool, true)
+    manage_dns          = optional(bool, true)
+    create_dns_zones    = optional(bool, true)
+    link_dns_zones      = optional(bool, true)
     dns_zone_ids = optional(object({
       sql             = string
       data_protection = string

@@ -456,7 +456,7 @@ resource "azurerm_private_endpoint" "web_app_unmanaged_dns" {
   }
 
   lifecycle {
-    ignore_changes = [ private_dns_zone_group ]
+    ignore_changes = [private_dns_zone_group]
   }
 }
 
@@ -477,7 +477,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "app_service" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "app_service_deployment" {
-  count                = local.link_dns_zones&& var.deployment_vnet_name != null ? 1 : 0
+  count                = local.link_dns_zones && var.deployment_vnet_name != null ? 1 : 0
   name                 = "${var.deployment_vnet_name}-deployment-link"
   private_dns_zone_id  = local.app_service_dns_zone_id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id

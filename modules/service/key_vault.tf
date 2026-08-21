@@ -175,7 +175,7 @@ resource "azurerm_private_endpoint" "key_vault_unmanaged_dns" {
     subresource_names              = ["vault"]
   }
 
-lifecycle {
-  ignore_changes = [ private_dns_zone_group ]
-}
+  lifecycle {
+    ignore_changes = [private_dns_zone_group]
+  }
 }

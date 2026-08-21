@@ -145,7 +145,7 @@ resource "azurerm_private_endpoint" "automation_unmanaged_dns" {
     subresource_names              = ["Webhook"]
   }
 
-lifecycle {
-  ignore_changes = [ private_dns_zone_group ]
-}
+  lifecycle {
+    ignore_changes = [private_dns_zone_group]
+  }
 }

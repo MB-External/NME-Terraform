@@ -77,16 +77,16 @@ locals {
   }
   has_arm_api = contains(keys(local.arm_api_app_id), var.azure_environment)
 
-  virtual_network_id          = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].id : data.azurerm_virtual_network.private_endpoints_vnet[0].id ) : null
-  virtual_network_name        = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].name : data.azurerm_virtual_network.private_endpoints_vnet[0].name) : null
-  create_dns_zones            = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.create_dns_zones : var.existing_network_config.create_dns_zones) : false
-  link_dns_zones              = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.link_dns_zones : var.existing_network_config.link_dns_zones) : false
-  manage_dns                  = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.manage_dns : var.existing_network_config.manage_dns) : false
-  app_service_dns_zone_id      = var.configure_private_endpoints ? (var.network_config != null ? azurerm_private_dns_zone.app_service[0].id : var.existing_network_config.dns_zone_ids.app_service) : null
-  automation_dns_zone_id      = var.configure_private_endpoints ? (var.network_config != null ? azurerm_private_dns_zone.automation[0].id : var.existing_network_config.dns_zone_ids.automation) : null
-  sql_dns_zone_id             = var.configure_private_endpoints ? (var.network_config != null ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.dns_zone_ids.sql) : null
-  data_protection_dns_zone_id = var.configure_private_endpoints ? (var.network_config != null ? azurerm_private_dns_zone.data_protection[0].id : var.existing_network_config.dns_zone_ids.data_protection) : null
-  key_vault_dns_zone_id       = var.configure_private_endpoints ? (var.network_config != null ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.dns_zone_ids.key_vault) : null
-  deploy_private_endpoint_managed_dns = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns) ? 1 : 0
+  virtual_network_id                    = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].id : data.azurerm_virtual_network.private_endpoints_vnet[0].id) : null
+  virtual_network_name                  = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].name : data.azurerm_virtual_network.private_endpoints_vnet[0].name) : null
+  create_dns_zones                      = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.create_dns_zones : var.existing_network_config.create_dns_zones) : false
+  link_dns_zones                        = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.link_dns_zones : var.existing_network_config.link_dns_zones) : false
+  manage_dns                            = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.manage_dns : var.existing_network_config.manage_dns) : false
+  app_service_dns_zone_id               = local.create_dns_zones ? azurerm_private_dns_zone.app_service[0].id : var.existing_network_config.dns_zone_ids.app_service
+  automation_dns_zone_id                = local.create_dns_zones ? azurerm_private_dns_zone.automation[0].id : var.existing_network_config.dns_zone_ids.automation
+  sql_dns_zone_id                       = local.create_dns_zones ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.dns_zone_ids.sql
+  data_protection_dns_zone_id           = local.create_dns_zones ? azurerm_private_dns_zone.data_protection[0].id : var.existing_network_config.dns_zone_ids.data_protection
+  key_vault_dns_zone_id                 = local.create_dns_zones ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.dns_zone_ids.key_vault
+  deploy_private_endpoint_managed_dns   = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns) ? 1 : 0
   deploy_private_endpoint_unmanaged_dns = var.configure_private_endpoints && var.existing_network_config != null && !var.existing_network_config.manage_dns ? 1 : 0
 }

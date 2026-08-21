@@ -30,9 +30,9 @@ resource "azurerm_subnet" "private_endpoints" {
 }
 
 data "azurerm_subnet" "private_endpoints" {
-  count               = var.configure_private_endpoints && var.existing_network_config != null ? 1 : 0
-  name                = var.existing_network_config.pe_subnet_name
-  resource_group_name = var.existing_network_config.resource_group_name
+  count                = var.configure_private_endpoints && var.existing_network_config != null ? 1 : 0
+  name                 = var.existing_network_config.pe_subnet_name
+  resource_group_name  = var.existing_network_config.resource_group_name
   virtual_network_name = var.existing_network_config.vnet_name
 }
 resource "azurerm_subnet" "app" {
@@ -55,9 +55,9 @@ resource "azurerm_subnet" "app" {
   private_endpoint_network_policies = "RouteTableEnabled"
 }
 data "azurerm_subnet" "app" {
-  count               = var.configure_private_endpoints && var.existing_network_config != null ? 1 : 0
-  name                = var.existing_network_config.app_subnet_name
-  resource_group_name = var.existing_network_config.resource_group_name
+  count                = var.configure_private_endpoints && var.existing_network_config != null ? 1 : 0
+  name                 = var.existing_network_config.app_subnet_name
+  resource_group_name  = var.existing_network_config.resource_group_name
   virtual_network_name = var.existing_network_config.vnet_name
 }
 

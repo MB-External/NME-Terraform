@@ -101,7 +101,7 @@ resource "azurerm_private_dns_zone" "sql" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
-  count                = local.link_dns_zones? 1 : 0
+  count                = local.link_dns_zones ? 1 : 0
   name                 = "${var.network_config.vnet_name}-link"
   private_dns_zone_id  = azurerm_private_dns_zone.sql[0].id
   virtual_network_id   = local.virtual_network_id
