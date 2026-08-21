@@ -87,6 +87,6 @@ locals {
   sql_dns_zone_id                       = local.create_dns_zones ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.dns_zone_ids.sql
   data_protection_dns_zone_id           = local.create_dns_zones ? azurerm_private_dns_zone.data_protection[0].id : var.existing_network_config.dns_zone_ids.data_protection
   key_vault_dns_zone_id                 = local.create_dns_zones ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.dns_zone_ids.key_vault
-  deploy_private_endpoint_managed_dns   = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns) 
-  deploy_private_endpoint_unmanaged_dns = var.configure_private_endpoints && var.existing_network_config != null && !var.existing_network_config.manage_dns 
+  deploy_private_endpoint_managed_dns   = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns)
+  deploy_private_endpoint_unmanaged_dns = var.configure_private_endpoints && var.existing_network_config != null && !var.existing_network_config.manage_dns
 }

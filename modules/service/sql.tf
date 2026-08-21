@@ -1,5 +1,5 @@
 data "azuread_service_principal" "current" {
-  count = var.sql_azuread_administrator == null ? 1 : 0
+  count     = var.sql_azuread_administrator == null ? 1 : 0
   client_id = data.azurerm_client_config.current.client_id
 }
 
