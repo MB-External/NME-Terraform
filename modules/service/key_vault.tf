@@ -52,10 +52,17 @@ resource "azurerm_role_assignment" "key_vault_deployer_certificates_officer" {
   principal_id         = each.value
 }
 
-resource "azurerm_role_assignment" "key_vault_reader" {
+resource "azurerm_role_assignment" "key_vault_deployer_reader" {
   for_each             = local.read_only_deployment_principal_ids
   scope                = azurerm_key_vault.key_vault.id
   role_definition_name = "Key Vault Reader"
+  principal_id         = each.value
+}
+
+resource "azurerm_role_assignment" "key_vault_deployer_secrets_user" {
+  for_each             = local.read_only_deployment_principal_ids
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
   principal_id         = each.value
 }
 
