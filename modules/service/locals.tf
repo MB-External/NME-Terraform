@@ -79,9 +79,9 @@ locals {
 
   virtual_network_id                    = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].id : data.azurerm_virtual_network.private_endpoints_vnet[0].id) : null
   virtual_network_name                  = var.configure_private_endpoints ? (var.network_config != null ? azurerm_virtual_network.private_endpoints_vnet[0].name : data.azurerm_virtual_network.private_endpoints_vnet[0].name) : null
-  create_dns_zones                      = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.create_dns_zones : var.existing_network_config.create_dns_zones) : false
-  link_dns_zones                        = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.link_dns_zones : var.existing_network_config.link_dns_zones) : false
-  manage_dns                            = var.configure_private_endpoints ? (var.network_config != null ? var.network_config.manage_dns : var.existing_network_config.manage_dns) : false
+  create_dns_zones                      = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.create_dns_zones) : false
+  link_dns_zones                        = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.link_dns_zones) : false
+  manage_dns                            = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.manage_dns) : false
   app_service_dns_zone_id               = local.create_dns_zones ? azurerm_private_dns_zone.app_service[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.app_service : null
   automation_dns_zone_id                = local.create_dns_zones ? azurerm_private_dns_zone.automation[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.automation : null
   sql_dns_zone_id                       = local.create_dns_zones ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.sql : null

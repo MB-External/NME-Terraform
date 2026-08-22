@@ -155,6 +155,16 @@ variable "sql_server_identity" {
   nullable = false
 }
 
+variable "sql_azuread_administrator" {
+  description = "Azure AD administrator for SQL Server, uses the current service principal if not specified"
+  type = object({
+    login_username = string
+    object_id      = string
+    tenant_id      = string
+  })
+  default = null
+}
+
 variable "database_name" {
   description = "Name for the SQL Database resource"
   type        = string

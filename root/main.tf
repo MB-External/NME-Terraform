@@ -63,4 +63,10 @@ module "service" {
   private_endpoint_post_resolve_delay  = var.private_endpoint_post_resolve_delay
   app_cert_name                        = var.app_cert_name
   app_cert_lifetime_months             = var.app_cert_lifetime_months
+  app_package_redeploy_trigger         = var.app_package_redeploy_trigger
+  existing_network_config              = var.existing_network_config
+  tags                                 = var.tags
+  sql_server_identity                  = var.sql_server_identity
+  azuread_app_owners                   = var.azuread_app_owners
+  sql_azuread_administrator            = var.sql_azuread_administrator
 }

@@ -82,7 +82,7 @@ resource "azurerm_virtual_network_peering" "private_to_deployment" {
   count                        = var.configure_private_endpoints && var.deployment_vnet_name != null ? 1 : 0
   name                         = "private-to-deployment-${local.virtual_network_name}"
   resource_group_name          = var.resource_group_name
-  virtual_network_name         = azurerm_virtual_network.private_endpoints_vnet[0].name
-  remote_virtual_network_id    = local.virtual_network_id
+  virtual_network_name         = local.virtual_network_name
+  remote_virtual_network_id    = data.azurerm_virtual_network.deployment_vnet[0].id
   allow_virtual_network_access = true
 }
