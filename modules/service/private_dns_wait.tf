@@ -4,7 +4,7 @@ resource "null_resource" "wait_for_key_vault_private_dns" {
   triggers = {
     fqdn                   = "${var.key_vault_name}${local.key_vault_suffix}"
     port                   = "443"
-    private_endpoint_id    = azurerm_private_endpoint.key_vault[0].id
+    private_endpoint_id    = local.private_endpoint_key_vault_id
     dns_link_id            = try(azurerm_private_dns_zone_virtual_network_link.key_vault[0].id, null)
     deployment_dns_link_id = try(azurerm_private_dns_zone_virtual_network_link.key_vault_deployment[0].id, null)
     deployment_peering_id  = try(azurerm_virtual_network_peering.deployment_to_private[0].id, null)
@@ -31,7 +31,7 @@ resource "null_resource" "wait_for_sql_private_dns" {
   triggers = {
     fqdn                   = "${var.sql_server_name}${local.sql_server_suffix}"
     port                   = "1433"
-    private_endpoint_id    = azurerm_private_endpoint.sql_server[0].id
+    private_endpoint_id    = local.private_endpoint_sql_server_id
     dns_link_id            = try(azurerm_private_dns_zone_virtual_network_link.sql[0].id, null)
     deployment_dns_link_id = try(azurerm_private_dns_zone_virtual_network_link.sql_deployment[0].id, null)
     deployment_peering_id  = try(azurerm_virtual_network_peering.deployment_to_private[0].id, null)
@@ -58,7 +58,7 @@ resource "null_resource" "wait_for_app_service_private_dns" {
   triggers = {
     fqdn                   = "${var.web_app_portal_name}${local.web_app_suffix}"
     port                   = "443"
-    private_endpoint_id    = azurerm_private_endpoint.web_app[0].id
+    private_endpoint_id    = local.private_endpoint_app_service_id
     dns_link_id            = try(azurerm_private_dns_zone_virtual_network_link.app_service[0].id, null)
     deployment_dns_link_id = try(azurerm_private_dns_zone_virtual_network_link.app_service_deployment[0].id, null)
     deployment_peering_id  = try(azurerm_virtual_network_peering.deployment_to_private[0].id, null)

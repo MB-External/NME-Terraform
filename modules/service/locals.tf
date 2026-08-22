@@ -89,4 +89,9 @@ locals {
   key_vault_dns_zone_id                 = local.create_dns_zones ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.key_vault : null
   deploy_private_endpoint_managed_dns   = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns)
   deploy_private_endpoint_unmanaged_dns = var.configure_private_endpoints && var.existing_network_config != null && !var.existing_network_config.manage_dns
+  private_endpoint_app_service_id       = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.web_app[0].id : azurerm_private_endpoint.web_app_unmanaged_dns[0].id : null
+  private_endpoint_automation_id        = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.automation[0].id : azurerm_private_endpoint.automation_unmanaged_dns[0].id : null
+  private_endpoint_sql_server_id        = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.sql_server[0].id : azurerm_private_endpoint.sql_server_unmanaged_dns[0].id : null
+  private_endpoint_data_protection_id   = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.storage_blob[0].id : azurerm_private_endpoint.storage_blob_unmanged_dns[0].id : null
+  private_endpoint_key_vault_id         = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.key_vault[0].id : azurerm_private_endpoint.key_vault_unmanaged_dns[0].id : null
 }
