@@ -189,8 +189,8 @@ resource "azuread_application" "nme_app" {
 
 # Look up the ARM / Service Management API SP to resolve permission IDs
 data "azuread_service_principal" "arm_api" {
-  count        = local.has_arm_api ? 1 : 0
-  client_id    = local.arm_api_app_id[var.azure_environment]
+  count     = local.has_arm_api ? 1 : 0
+  client_id = local.arm_api_app_id[var.azure_environment]
 }
 removed {
   from = azuread_service_principal.arm_api
