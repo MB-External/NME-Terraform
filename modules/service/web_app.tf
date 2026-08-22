@@ -146,7 +146,7 @@ resource "null_resource" "download_package" {
       New-Item -Path $tempDir -ItemType Directory | Out-Null
       $zipPath = Join-Path $tempDir 'package.zip'
 
-      $localPackagePath = '${replace(coalesce(var.app_package_local_path, ""), "'", "''")}'
+      $localPackagePath = '${replace(try(var.app_package_local_path, ""), "'", "''")}'
 
       if (-not [string]::IsNullOrWhiteSpace($localPackagePath)) {
           # --- Offline install: use pre-downloaded local package ----------- #
