@@ -114,9 +114,11 @@ variable "existing_network_config" {
     create_dns_zones    = optional(bool, true)
     link_dns_zones      = optional(bool, true)
     dns_zone_ids = optional(object({
-      sql             = string
-      data_protection = string
-      automation      = string
+      sql         = string
+      blob        = string
+      automation  = string
+      key_vault   = string
+      app_service = string
     }))
   })
   default = null
