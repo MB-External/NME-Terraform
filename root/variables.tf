@@ -104,7 +104,7 @@ variable "network_config" {
   default = null
 }
 variable "existing_network_config" {
-  description = "Existing network configuration for private endpoints. Required when configure_private_endpoints = true and network_config is not provided."
+  description = "Use a pre-existing VNet and subnets for private endpoints instead of creating them. Required when configure_private_endpoints = true and network_config is not set. See README for DNS management options."
   type = object({
     vnet_name           = string
     pe_subnet_name      = string
@@ -146,7 +146,7 @@ variable "sql_server_name" {
 }
 
 variable "sql_server_identity" {
-  description = "Object ID of the user-assigned managed identity to use for SQL Server authentication. If not provided, the SQL Server will use its system-assigned managed identity."
+  description = "SQL Server identity configuration. Defaults to a system-assigned identity. See README for user-assigned identity and create_role_assignment options."
   type = object({
     type                              = optional(string, "SystemAssigned")
     identity_ids                      = optional(list(string), [])

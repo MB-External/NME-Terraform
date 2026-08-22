@@ -13,6 +13,7 @@ This Terraform configuration deploys [Nerdio Manager for Enterprise (NME)](https
 - [Inputs](#inputs)
 - [Outputs](#outputs)
 - [Configure private endpoints](#configure-private-endpoints)
+- [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone)
 - [Using a Pre-Existing VNet and Subnets](#using-a-pre-existing-vnet-and-subnets)
 - [Offline / Disconnected Package Install](#offline--disconnected-package-install)
 - [Operational Notes](#operational-notes)
@@ -39,7 +40,7 @@ The module automates the deployment of Nerdio Manager for Enterprise infrastruct
 
 ### Tooling
 
-- Terraform `>= 1.6.0`
+- Terraform `>= 1.12.0`
 - PowerShell 7 or later, with the `pwsh` command available from the command line on the machine running Terraform
 
 If `pwsh` is not already installed, install PowerShell before running Terraform:
@@ -92,11 +93,11 @@ The service principal used to run Terraform must have the following **Microsoft 
 
 ### Terraform Providers
 
-The root module requires `hashicorp/azurerm >= 3.110.0`. 
+The root module requires `hashicorp/azurerm ~> 5.0`. 
 
 The `modules/service` child module requires:
 
-- `hashicorp/azurerm >= 3.110.0`
+- `hashicorp/azurerm ~> 5.0`
 - `hashicorp/azuread >= 2.47.0`
 - `hashicorp/random >= 3.5.0`
 - `hashicorp/null >= 3.2.0`
@@ -123,17 +124,18 @@ The `modules/service` module deploys and configures:
   - Windows Web App 
   - Package deployment pipeline
 - **Identity and access**
-  - Entra ID application + service principal
+  - Entra ID application + service principal, with optional additional app owners (`azuread_app_owners`)
   - Application password and certificate credential
   - App roles (Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient) and optional user role assignments
   - RBAC role assignments for the NME service principal
 - **Database**
   - Azure SQL Server + database
-  - Entra ID admin configuration
+  - Entra ID admin configuration — defaults to the deploying service principal, or a custom principal via `sql_azuread_administrator`
+  - System-assigned identity by default, or a centrally managed user-assigned identity via `sql_server_identity` (common in Landing Zone environments)
   - SQL firewall rules for Azure services and deployer IP (when private endpoints are disabled)
   - SQL user bootstrap for NME service principal
 - **Secrets and keys**
-  - Key Vault
+  - Key Vault (purge protection always enabled)
   - Data protection key
   - Secrets for SQL connection string, Entra ID client secret, data protection blob path, locks container SAS URL
 - **Storage**
@@ -148,12 +150,14 @@ The `modules/service` module deploys and configures:
   - Data Collection Endpoint + Data Collection Rule
   - Application Insights
 - **Networking (optional)**
-  - Dedicated VNet + subnets for private endpoints and app integration
-  - VNet peering to deployment VNet (optional)
-  - Private DNS zones + VNet links
+  - A dedicated VNet + subnets for private endpoints and app integration created by the module, **or** an existing VNet and subnets (`existing_network_config`) for Azure Landing Zone deployments
+  - VNet peering to a deployment VNet (optional — not needed when the deployment machine already has network line of sight to the existing VNet, e.g. via hub-spoke peering)
+  - Private DNS zones + VNet links managed by the module, or left unmanaged (`manage_dns = false`) when a central platform (e.g. Azure Policy) manages private DNS zone groups
   - Private endpoints for Web App, SQL, Key Vault, Storage (blob), Automation
 - **Protection (optional)**
   - Management locks for Key Vault, SQL database, and data protection storage account
+- **Tagging**
+  - Global `tags` applied to all resources, plus `tags_by_resource` for resource-type-specific tags
 
 ## Quick Start
 
@@ -266,6 +270,57 @@ tags_by_resource = {
 }
 ```
 
+### 5) Azure Landing Zone deployment (existing VNet, centrally managed DNS)
+
+Use `existing_network_config` instead of `network_config` when the private-endpoint VNet and subnets already exist (e.g. deployed by a landing zone spoke pipeline), and set `manage_dns = false` when private DNS zones and zone groups are managed centrally by Azure Policy rather than by this module:
+
+```hcl
+configure_private_endpoints = true
+private_web_app             = true
+
+existing_network_config = {
+  vnet_name           = "spoke-nme-vnet"
+  resource_group_name = "rg-network-spoke"
+  pe_subnet_name       = "nme-privateendpoints-subnet"
+  app_subnet_name      = "nme-app-subnet"
+
+  # DNS zones/records for the private endpoints are created and linked by
+  # an Azure Policy assignment at the landing zone level, not by this module.
+  manage_dns = false
+}
+
+# Not required here: the Terraform runner already has network line of sight
+# to the spoke VNet (e.g. via hub-spoke peering), so deployment_vnet_name /
+# deployment_resource_group_name can be omitted.
+
+# Use a centrally managed user-assigned identity for SQL Server instead of a
+# system-assigned identity. identity_ids and primary_user_assigned_identity_id
+# are ARM resource IDs (not object/principal IDs) - the module looks up the
+# identity's object/principal ID itself when granting Directory.Read.All.
+sql_server_identity = {
+  type                               = "SystemAssigned, UserAssigned"
+  identity_ids                       = ["/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"]
+  primary_user_assigned_identity_id  = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
+}
+
+# Use a break-glass group as the SQL Entra ID admin instead of the deploying
+# service principal
+sql_azuread_administrator = {
+  login_username = "sql-admins@contoso.com"
+  object_id      = "00000000-0000-0000-0000-000000000000"
+  tenant_id      = "11111111-1111-1111-1111-111111111111"
+}
+
+# Apply mandatory landing zone tags to every resource
+tags = {
+  environment  = "production"
+  cost-center  = "12345"
+  landing-zone = "corp"
+}
+```
+
+See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone) for the full set of options.
+
 ## Inputs
 
 ### Required
@@ -300,16 +355,22 @@ tags_by_resource = {
 |------|------|---------|-------------|
 | `protect_resources` | `bool` | `false` | Apply management locks to Key Vault, SQL Database, and Storage Account |
 | `database_max_size_gb` | `number` | `250` | Maximum size of the SQL database in GB |
+| `azuread_app_owners` | `set(string)` | `[]` | Object IDs of additional owners to assign to the Entra ID application |
+| `tags` | `map(string)` | `{}` | Tags applied to every resource created by the module, merged with `tags_by_resource` |
 | `tags_by_resource` | `map(map(string))` | `{}` | Resource-type-specific tags |
 | `configure_private_endpoints` | `bool` | `false` | Whether to create private endpoints for services |
-| `deployment_vnet_name` | `string` | `null` | VNet from which Terraform deployment is executed. **Required when `configure_private_endpoints = true`** |
-| `deployment_resource_group_name` | `string` | `null` | Resource group of the deployment VNet. **Required when `configure_private_endpoints = true`** |
-| `network_config` | `object` | `null` | Network configuration for private endpoints. ** Required when `configure_private_endpoints = true`** |
+| `deployment_vnet_name` | `string` | `null` | VNet from which Terraform deployment is executed. **Required when `configure_private_endpoints = true`**, unless `existing_network_config` is set and the runner already has connectivity to that VNet |
+| `deployment_resource_group_name` | `string` | `null` | Resource group of the deployment VNet. **Required when `configure_private_endpoints = true`**, unless `existing_network_config` is set and the runner already has connectivity to that VNet |
+| `network_config` | `object` | `null` | Network configuration used to **create** a new VNet and subnets for private endpoints. Required when `configure_private_endpoints = true` and `existing_network_config` is not set. Mutually exclusive with `existing_network_config` |
+| `existing_network_config` | `object` | `null` | Use a **pre-existing** VNet and subnets instead of creating new ones (Azure Landing Zone pattern). Required when `configure_private_endpoints = true` and `network_config` is not set. See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone) |
+| `sql_server_identity` | `object` | `{}` (system-assigned) | SQL Server identity configuration. Set `type = "SystemAssigned, UserAssigned"` plus `identity_ids` / `primary_user_assigned_identity_id` (ARM resource IDs, e.g. `.../userAssignedIdentities/<name>`) to use a centrally managed user-assigned identity. `create_role_assignment` controls whether the module grants `Directory.Read.All` to the identity |
+| `sql_azuread_administrator` | `object` | `null` | Custom Entra ID administrator for SQL Server (`login_username`, `object_id`, `tenant_id`). Defaults to the deploying service principal when not set |
 | `private_web_app` | `bool` | `false` | Whether the Web App should be accessible only via private endpoint |
 | `data_protection_key_name` | `string` | `"DataProtection-main"` | Name of the data protection key in Key Vault |
 | `maintenance_service_url` | `string` | `"https://nwp-web-app.azurewebsites.net"` | URL of the NME maintenance service |
 | `app_package_version` | `string` | `"latest"`  | Application package version to deploy or `latest`. Ignored when `app_package_local_path` is set |
 | `app_package_local_path` | `string` | `null` | Absolute path to a pre-downloaded NME application package `.zip` on the machine running Terraform. When set, the maintenance service is not contacted (offline/disconnected install). The package archive must contain `app.zip` and related deployment files |
+| `app_package_redeploy_trigger` | `string` | `"1"` | Change this value to force the application package to be re-downloaded and redeployed on the next `apply`. Package deployment steps only run when this value changes, rather than on every `apply` |
 | `app_role_assignments` | `map(list(string))` | `{}` | Map of app role names to lists of user principal names to assign |
 | `private_endpoint_post_resolve_delay` | `number` | `0` | Extra delay in seconds after private endpoint connectivity is confirmed. Increase to 60–180 if first deploy with private endpoints fails with 403 errors on KV writes |
 
@@ -388,6 +449,8 @@ The module provisions a dedicated VNet with two subnets and creates private endp
 
 Each private endpoint gets a corresponding private DNS zone linked to the NME VNet (and the deployment VNet, if configured). This ensures that DNS queries for these services resolve to private IP addresses within the VNet instead of public endpoints.
 
+> **Azure Landing Zone deployments:** if you already have a VNet, subnets, and/or centrally managed private DNS (e.g. via Azure Policy), use `existing_network_config` instead of `network_config`. See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone).
+
 ### Why Terraform must run from the deployment network
 
 Once private endpoints are enabled, the following resources reject traffic originating from outside the VNet:
@@ -398,7 +461,7 @@ Once private endpoints are enabled, the following resources reject traffic origi
 
 Terraform needs to reach these resources during deployment (e.g., to bootstrap the SQL user, write Key Vault secrets, and upload blobs). If Terraform runs from a machine that is not on a network peered to the NME VNet, those operations will fail with network connectivity errors.
 
-To solve this, run Terraform from a VM (or CI/CD agent) that resides on a **deployment VNet** — a pre-existing VNet that the module will peer with the NME private-endpoints VNet. The module creates bidirectional VNet peering and links every private DNS zone to the deployment VNet, so the deployment machine can resolve and reach all private endpoints.
+To solve this, run Terraform from a VM (or CI/CD agent) that resides on a **deployment VNet** — a pre-existing VNet that the module will peer with the NME private-endpoints VNet. The module creates bidirectional VNet peering and links every private DNS zone to the deployment VNet, so the deployment machine can resolve and reach all private endpoints. If the runner already has network line of sight to the NME VNet (for example, it runs inside a landing zone hub that is already peered to the spoke), `deployment_vnet_name` / `deployment_resource_group_name` can be omitted and no additional peering will be created.
 
 ### Configuration
 
@@ -429,13 +492,94 @@ network_config = {
 |----------|----------|-------------|
 | `configure_private_endpoints` | Yes | Set to `true` to enable private endpoints for all services |
 | `private_web_app` | No | When `true`, the Web App is also made private (public access disabled). Defaults to `false` |
-| `deployment_vnet_name` | Yes (when PE enabled) | Name of the pre-existing VNet where the Terraform runner is located. The module creates VNet peering and links all private DNS zones to this VNet |
-| `deployment_resource_group_name` | Yes (when PE enabled) | Resource group of the deployment VNet |
-| `network_config` | Yes (when PE enabled) | Object defining VNet and subnet names/CIDRs for the NME private network |
+| `deployment_vnet_name` | Conditional | Name of the pre-existing VNet where the Terraform runner is located. Required unless `existing_network_config` is used and the runner already has connectivity. The module creates VNet peering and links all private DNS zones to this VNet |
+| `deployment_resource_group_name` | Conditional | Resource group of the deployment VNet. Same condition as `deployment_vnet_name` |
+| `network_config` | One of `network_config` / `existing_network_config` required (when PE enabled) | Object defining VNet and subnet names/CIDRs for a **new** NME private network created by the module |
+| `existing_network_config` | One of `network_config` / `existing_network_config` required (when PE enabled) | Object referencing an **existing** VNet, subnets, and (optionally) DNS zones — see [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone) |
+
+## Deploying into an Azure Landing Zone
+
+Azure Landing Zone (ALZ) environments typically provision spoke VNets and subnets ahead of time (via a network pipeline or Bicep/Terraform IaC outside this module) and often manage private DNS zones centrally with Azure Policy (e.g. the `DINE` policies that create and link `privatelink.*` zones automatically). The `existing_network_config` variable lets this module participate in that pattern instead of creating its own network resources.
+
+### Referencing an existing VNet and subnets
+
+Set `existing_network_config` instead of `network_config`. The module uses data sources to reference the VNet and subnets, so nothing is created or imported:
+
+```hcl
+configure_private_endpoints = true
+
+existing_network_config = {
+  vnet_name           = "spoke-nme-vnet"
+  resource_group_name = "rg-network-spoke"
+  pe_subnet_name      = "nme-privateendpoints-subnet"
+  app_subnet_name     = "nme-app-subnet"
+}
+```
+
+Requirements for the existing subnets:
+
+- The app-integration subnet must be delegated to `Microsoft.Web/serverFarms` and have the `Microsoft.KeyVault` service endpoint enabled.
+- Both subnets should have `private_endpoint_network_policies = RouteTableEnabled` (or the equivalent for your provider version).
+
+### Controlling private DNS management
+
+`existing_network_config` includes DNS options so the module can either manage private DNS itself or defer entirely to a central platform:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `manage_dns` | `true` | When `false`, this module does not create, link, or reference any private DNS zones. Private endpoints are still created, but their `private_dns_zone_group` is left unmanaged (`lifecycle { ignore_changes = [private_dns_zone_group] }`) so a central process — typically an Azure Policy assignment — can populate DNS records without Terraform reverting them on the next `apply` |
+| `create_dns_zones` | `true` | When `manage_dns = true`: whether the module creates the five `privatelink.*` private DNS zones. Set to `false` to reuse zones that already exist (e.g. in a hub resource group) |
+| `link_dns_zones` | `true` | When `manage_dns = true`: whether the module links the private DNS zones to the NME VNet (and deployment VNet, if configured) |
+| `dns_zone_ids` | `null` | Required when `manage_dns = true` and `create_dns_zones = false`. Object with `sql`, `blob`, `automation`, `key_vault`, and `app_service` keys giving the resource IDs of the existing private DNS zones to use |
+
+Common combinations:
+
+```hcl
+# 1) DNS fully managed centrally by Azure Policy — this module does not touch DNS at all
+existing_network_config = {
+  vnet_name           = "spoke-nme-vnet"
+  resource_group_name = "rg-network-spoke"
+  pe_subnet_name      = "nme-privateendpoints-subnet"
+  app_subnet_name     = "nme-app-subnet"
+  manage_dns          = false
+}
+
+# 2) Reuse existing hub private DNS zones, but let this module create the VNet links
+existing_network_config = {
+  vnet_name           = "spoke-nme-vnet"
+  resource_group_name = "rg-network-spoke"
+  pe_subnet_name      = "nme-privateendpoints-subnet"
+  app_subnet_name     = "nme-app-subnet"
+  create_dns_zones    = false
+  dns_zone_ids = {
+    sql         = "/subscriptions/.../resourceGroups/rg-dns-hub/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net"
+    blob        = "/subscriptions/.../resourceGroups/rg-dns-hub/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
+    automation  = "/subscriptions/.../resourceGroups/rg-dns-hub/providers/Microsoft.Network/privateDnsZones/privatelink.azure-automation.net"
+    key_vault   = "/subscriptions/.../resourceGroups/rg-dns-hub/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
+    app_service = "/subscriptions/.../resourceGroups/rg-dns-hub/providers/Microsoft.Network/privateDnsZones/privatelink.azurewebsites.net"
+  }
+}
+```
+
+> `network_config` and `existing_network_config` are mutually exclusive — set exactly one of them when `configure_private_endpoints = true`.
+
+### Identity and access in Landing Zone environments
+
+Two additional variables help align the deployment with centrally governed identity patterns commonly enforced in Landing Zones:
+
+- `sql_server_identity` — use a centrally managed user-assigned identity for the SQL Server instead of (or alongside) its system-assigned identity, and optionally skip the module's `Directory.Read.All` role assignment if that permission is already granted centrally (`create_role_assignment = false`). `identity_ids` and `primary_user_assigned_identity_id` take the identity's ARM resource ID (not its object/principal ID) — the module resolves the object/principal ID itself when creating the role assignment.
+- `sql_azuread_administrator` — set the SQL Server's Entra ID administrator to a specific group or principal (e.g. a break-glass admin group) instead of defaulting to the deploying service principal.
+- `azuread_app_owners` — assign additional owners (e.g. a platform team group) to the Entra ID application created for NME.
+
+Where possible, prefer passing these values into this module from references already resolved in your own root module (for example from another module's outputs, data sources, or remote state) rather than maintaining duplicated literal IDs in tfvars. This module intentionally accepts plain values, so that wiring is left to consumers to implement in the way that best fits their platform composition.
+
+See [Configuration Example 5](#5-azure-landing-zone-deployment-existing-vnet-centrally-managed-dns) for a complete example combining these options.
 
 ## Using a Pre-Existing VNet and Subnets
 
-If you have already deployed the VNet and subnets outside of this Terraform module (manually, via another pipeline, or a separate Terraform root), you can still use the module. The approach is to import the existing Azure resources into Terraform state so the module treats them as its own, and then set `network_config` so the module's resource definitions match what is already deployed.
+> **Prefer `existing_network_config`** (see [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone)) if you simply want the module to reference an existing VNet and subnets — it does this natively via data sources and requires no import step. The import-based approach below remains useful if you want the VNet and subnets themselves to be fully managed by this module's Terraform state (for example, to apply `network_config`-style changes to them going forward).
+
+If you have already deployed the VNet and subnets outside of this Terraform module (manually, via another pipeline, or a separate Terraform root), you can still import them so the module manages them going forward via `network_config`.
 
 ### How it works
 
@@ -539,9 +683,12 @@ Note that this is not a fully air-gapped install: the deployment still requires 
 ## Operational Notes
 
 - `provider "azurerm"` in root sets `resource_provider_registrations = "none"`; resource providers must already be registered in the subscription.
-- Several deployment steps use `null_resource` with `timestamp()` triggers, so package download, deploy, and health-check steps run on every `terraform apply`.
-- When enabling private endpoints, the build pipeline running Terraform **must** execute from the deployment network specified by `deployment_vnet_name`. This network is peered to the NME VNet and all private DNS zones are linked to it, giving the runner access to otherwise private resources (SQL, Key Vault, Storage).
-- `network_config`, `deployment_vnet_name`, and `deployment_resource_group_name` are all required when `configure_private_endpoints = true`.
+- The application package deployment steps (download, deploy, WebJob stop/start, health check) only re-run when `app_package_redeploy_trigger` changes, rather than on every `terraform apply`. Change this variable's value (e.g. bump a version string) to force a redeploy.
+- When enabling private endpoints with `network_config` (module-created VNet), the build pipeline running Terraform **must** execute from the deployment network specified by `deployment_vnet_name`. This network is peered to the NME VNet and all private DNS zones are linked to it, giving the runner access to otherwise private resources (SQL, Key Vault, Storage). `deployment_vnet_name` and `deployment_resource_group_name` are optional when using `existing_network_config` if the runner already has network connectivity to the existing VNet.
+- Exactly one of `network_config` or `existing_network_config` is required when `configure_private_endpoints = true`.
+- When `existing_network_config.manage_dns = false`, this module does not create, link, or write to any private DNS zone for the private endpoints — it is expected that a central process (typically an Azure Policy assignment) manages private DNS zone groups for the endpoints. The module still creates the private endpoints themselves and ignores changes to `private_dns_zone_group` on them.
+- Key Vault `purge_protection_enabled` is always `true` and cannot be disabled. Soft-deleted Key Vaults cannot be permanently purged before the retention period (90 days) expires; plan resource naming accordingly if you expect to redeploy under the same name.
+- The Microsoft Graph and ARM/Service Management API service principals are referenced via data sources rather than managed resources, so `terraform destroy` will never attempt to delete these shared, tenant-wide service principals.
 - On clean deployments with `configure_private_endpoints = true`, Azure may return **403 `ForbiddenByConnection`** errors when writing Key Vault secrets or keys. This happens because of race condition between private endpoint creation and DNS propagation. Two mitigation options:
   1. **Increase the post-resolve delay** — set `private_endpoint_post_resolve_delay = 60` (or higher) to add a wait buffer after DNS and TCP checks pass but before Terraform proceeds to write secrets.
   2. **Re-run `terraform apply`** — a second apply will succeed because the private endpoints are already fully propagated; this is safe because all Terraform resources are idempotent.
@@ -554,7 +701,11 @@ Note that this is not a fully air-gapped install: the deployment still requires 
 - **App role assignments fail for users**
   - Verify each UPN exists in Entra ID, and that the deployment identity can read users and assign app roles.
 - **Private endpoint deployment cannot resolve resources**
-  - Verify `network_config`, DNS zone links, and that `deployment_vnet_name` + `deployment_resource_group_name` are correct.
+  - Verify `network_config` (or `existing_network_config`), DNS zone links, and — if the runner is not already connected to the VNet — that `deployment_vnet_name` + `deployment_resource_group_name` are correct.
+- **Private endpoint DNS records never appear / `manage_dns = false` but resources are unreachable**
+  - Confirm the central Azure Policy (or other platform process) responsible for populating `private_dns_zone_group` on private endpoints is assigned to the resource group/subscription and has run. This module intentionally does not manage DNS in this mode.
+- **`dns_zone_ids must be specified` / `dns_zone_ids should not be specified` validation errors**
+  - These come from `existing_network_config`: set `dns_zone_ids` only when `manage_dns = true` and `create_dns_zones = false`; otherwise omit it.
 - **SQL bootstrap (`Invoke-Sqlcmd`) fails**
   - Ensure SQL connectivity path is valid from the deployment environment and token-based auth commands succeed.
 

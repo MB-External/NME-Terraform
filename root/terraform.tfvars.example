@@ -12,6 +12,9 @@ azure_tag_prefix = "NMW"
 
 protect_resources = true
 
+# Optional: additional owners (object IDs) for the Entra ID application
+# azuread_app_owners = ["00000000-0000-0000-0000-000000000000"]
+
 # -----------------
 # Application
 # -----------------
@@ -35,6 +38,26 @@ database_name   = "{app-name}-db"
 sql_collation   = "SQL_Latin1_General_CP1_CI_AS"
 database_max_size_gb = 250
 database_sku_name = "S1"
+
+# Optional: use a centrally managed user-assigned identity instead of a
+# system-assigned identity for the SQL Server (common in Landing Zones)
+# In real roots, prefer passing these IDs from data sources, remote state,
+# or other module outputs rather than maintaining duplicated literal values
+# in tfvars. This module accepts plain values; that wiring is left to
+# consumers to implement.
+# sql_server_identity = {
+#   type                               = "SystemAssigned, UserAssigned"
+#   identity_ids                       = ["/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"]
+#   primary_user_assigned_identity_id  = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
+# }
+
+# Optional: use a specific Entra ID principal (e.g. a break-glass admin group)
+# as the SQL Server administrator instead of the deploying service principal
+# sql_azuread_administrator = {
+#   login_username = "sql-admin"
+#   object_id      = "00000000-0000-0000-0000-000000000000"
+#   tenant_id      = "11111111-1111-1111-1111-111111111111"
+# }
 
 # -----------------
 # Storage
@@ -61,7 +84,8 @@ app_cert_lifetime_months = 4  # ~120 days; key is reused on renewal
 configure_private_endpoints = false
 private_web_app             = false
 
-# Required when configure_private_endpoints = true
+# Required when configure_private_endpoints = true, unless existing_network_config
+# is used and the Terraform runner already has connectivity to that VNet
 # deployment_vnet_name           = "{deployment-vnet-name}"
 # deployment_resource_group_name = "{deployment-rg-name}"
 
@@ -69,6 +93,7 @@ private_web_app             = false
 # Increase to 60-180 if initial deploy fails with 403 ForbiddenByConnection.
 # private_endpoint_post_resolve_delay = 0
 
+# Option A: let the module create a new VNet and subnets for private endpoints
 network_config = {
   vnet_name       = "{app-name}-private-vnet"
   vnet_cidr       = "10.200.0.0/16"
@@ -78,9 +103,31 @@ network_config = {
   app_subnet_cidr = "10.200.2.0/27"
 }
 
+# Option B (Azure Landing Zone): reference an existing VNet/subnets instead of
+# network_config above (mutually exclusive with network_config). Set
+# manage_dns = false when private DNS zones/records are managed centrally,
+# e.g. by an Azure Policy assignment, rather than by this module.
+# In real roots, prefer sourcing these names and IDs from existing module
+# outputs, data sources, or remote state instead of duplicating static
+# environment-specific values here.
+# existing_network_config = {
+#   vnet_name           = "{existing-vnet-name}"
+#   resource_group_name = "{existing-vnet-rg}"
+#   pe_subnet_name      = "{existing-pe-subnet-name}"
+#   app_subnet_name     = "{existing-app-subnet-name}"
+#   manage_dns          = false
+# }
+
 # -----------------
 # Tags / misc
 # -----------------
+
+# Applied to every resource created by the module, in addition to
+# tags_by_resource below
+tags = {
+  # environment = "production"
+  # cost-center = "12345"
+}
 
 tags_by_resource = {
   # Tags are keyed by Azure resource provider type.
