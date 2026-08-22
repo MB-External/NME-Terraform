@@ -156,7 +156,7 @@ resource "azurerm_private_endpoint" "sql_server_unmanaged_dns" {
   }
 
   lifecycle {
-    ignore_changes = [ private_dns_zone_group ]
+    ignore_changes = [private_dns_zone_group]
   }
 }
 

@@ -8,6 +8,12 @@ variable "azuread_app_name" {
   type        = string
 }
 
+variable "azuread_app_owners" {
+  description = "Set of object IDs that will be owners for the Azure AD application"
+  type        = set(string)
+  default     = []
+}
+
 variable "azure_environment" {
   description = "Azure environment name (AzureCloud, AzureUSGovernment, AzureChinaCloud)"
   type        = string

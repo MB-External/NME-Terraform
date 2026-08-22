@@ -45,6 +45,7 @@ resource "azuread_application" "nme_app" {
       id_token_issuance_enabled     = true
     }
   }
+  owners = var.azuread_app_owners
 
   # ---- App Roles --------------------------------------------------------- #
   app_role {
