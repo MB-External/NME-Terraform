@@ -71,4 +71,5 @@ module "service" {
   sql_server_identity                  = var.sql_server_identity
   azuread_app_owners                   = var.azuread_app_owners
   sql_azuread_administrator            = var.sql_azuread_administrator
+  assign_subscription_roles            = var.assign_subscription_roles
 }
