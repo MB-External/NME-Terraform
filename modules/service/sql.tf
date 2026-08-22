@@ -20,9 +20,9 @@ removed {
 
 # Grant Directory.Read.All to SQL Server's Managed Identity
 resource "azuread_app_role_assignment" "sql_directory_read_all" {
-  count               = var.sql_server_user_assigned_identity_object_id == null ? 1 : 0
+  count               = var.sql_server_identity.create_role_assignment
   app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
-  principal_object_id = azurerm_mssql_server.sql_server.identity[0].principal_id
+  principal_object_id = var.sql_server_identity.primary_user_assigned_identity_id == null ? azurerm_mssql_server.sql_server.identity[0].principal_id : var.sql_server_identity.primary_user_assigned_identity_id
   resource_object_id  = data.azuread_service_principal.msgraph.object_id
 }
 moved {
@@ -46,10 +46,10 @@ resource "azurerm_mssql_server" "sql_server" {
   }
 
   identity {
-    type         = var.sql_server_user_assigned_identity_object_id == null ? "SystemAssigned" : "SystemAssigned, UserAssigned"
-    identity_ids = var.sql_server_user_assigned_identity_object_id == null ? null : [var.sql_server_user_assigned_identity_object_id]
+    type         = var.sql_server_identity.type
+    identity_ids = var.sql_server_identity.identity_ids == [] ? null : var.sql_server_identity.identity_ids
   }
-  primary_user_assigned_identity_id = var.sql_server_user_assigned_identity_object_id
+  primary_user_assigned_identity_id = var.sql_server_identity.primary_user_assigned_identity_id
 
   tags = merge(var.tags,
     {
