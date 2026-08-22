@@ -2,6 +2,7 @@ resource "azurerm_automation_account" "scripted_action" {
   name                = var.scripted_action_account_name
   location            = var.location
   resource_group_name = var.resource_group_name
+  public_network_access_enabled = false
 
   sku_name = "Basic"
 
@@ -18,6 +19,7 @@ resource "azurerm_automation_account" "automation" {
   name                = var.automation_account_name
   location            = var.location
   resource_group_name = var.resource_group_name
+  public_network_access_enabled = !var.configure_private_endpoints
 
   sku_name = "Basic"
 
