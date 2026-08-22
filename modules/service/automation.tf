@@ -126,7 +126,7 @@ resource "azurerm_private_endpoint" "automation" {
 
   private_dns_zone_group {
     name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.automation[0].id]
+    private_dns_zone_ids = [alocal.automation_dns_zone_id]
   }
 }
 
