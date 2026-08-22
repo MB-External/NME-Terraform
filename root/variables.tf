@@ -125,6 +125,12 @@ variable "sql_server_name" {
   type        = string
 }
 
+variable "sql_server_user_assigned_identity_object_id" {
+  description = "Object ID of the user-assigned managed identity to use for SQL Server authentication. If not provided, the SQL Server will use its system-assigned managed identity."
+  type        = string
+  default     = null
+}
+
 variable "database_name" {
   description = "Name for the SQL Database resource"
   type        = string
