@@ -5,16 +5,15 @@ data "azuread_service_principal" "current" {
 
 data "azuread_application_published_app_ids" "well_known" {}
 
-resource "azuread_service_principal" "msgraph" {
+data "azuread_service_principal" "msgraph" {
   client_id    = data.azuread_application_published_app_ids.well_known.result.MicrosoftGraph
-  use_existing = true
 }
 
 # Grant Directory.Read.All to SQL Server's Managed Identity
 resource "azuread_app_role_assignment" "sql_directory_read_all" {
-  app_role_id         = azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
+  app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
   principal_object_id = azurerm_mssql_server.sql_server.identity[0].principal_id
-  resource_object_id  = azuread_service_principal.msgraph.object_id
+  resource_object_id  = data.azuread_service_principal.msgraph.object_id
 }
 
 resource "azurerm_mssql_server" "sql_server" {

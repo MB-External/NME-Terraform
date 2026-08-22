@@ -110,65 +110,65 @@ resource "azuread_application" "nme_app" {
 
     # Application permissions
     resource_access {
-      id   = azuread_service_principal.msgraph.app_role_ids["GroupMember.Read.All"]
+      id   = data.azuread_service_principal.msgraph.app_role_ids["GroupMember.Read.All"]
       type = "Role"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.app_role_ids["User.Read.All"]
+      id   = data.azuread_service_principal.msgraph.app_role_ids["User.Read.All"]
       type = "Role"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.app_role_ids["Organization.Read.All"]
+      id   = data.azuread_service_principal.msgraph.app_role_ids["Organization.Read.All"]
       type = "Role"
     }
 
     # Delegated permissions
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.Read"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.Read"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.ReadBasic.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.ReadBasic.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.Read.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["User.Read.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["GroupMember.Read.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["GroupMember.Read.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["Application.Read.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["Application.Read.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["Organization.Read.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["Organization.Read.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["AppRoleAssignment.ReadWrite.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["AppRoleAssignment.ReadWrite.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["Application.ReadWrite.All"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["Application.ReadWrite.All"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["Mail.Send"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["Mail.Send"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["offline_access"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["offline_access"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["openid"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["openid"]
       type = "Scope"
     }
     resource_access {
-      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["profile"]
+      id   = data.azuread_service_principal.msgraph.oauth2_permission_scope_ids["profile"]
       type = "Scope"
     }
   }
@@ -180,7 +180,7 @@ resource "azuread_application" "nme_app" {
       resource_app_id = local.arm_api_app_id[var.azure_environment]
 
       resource_access {
-        id   = azuread_service_principal.arm_api[0].oauth2_permission_scope_ids["user_impersonation"]
+        id   = data.azuread_service_principal.arm_api[0].oauth2_permission_scope_ids["user_impersonation"]
         type = "Scope"
       }
     }
@@ -188,10 +188,9 @@ resource "azuread_application" "nme_app" {
 }
 
 # Look up the ARM / Service Management API SP to resolve permission IDs
-resource "azuread_service_principal" "arm_api" {
+data "azuread_service_principal" "arm_api" {
   count        = local.has_arm_api ? 1 : 0
   client_id    = local.arm_api_app_id[var.azure_environment]
-  use_existing = true
 }
 
 # --------------------------------------------------------------------------- #
