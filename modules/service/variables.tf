@@ -165,16 +165,16 @@ variable "sql_server_name" {
 
 variable "sql_server_identity" {
   description = "Object ID of the user-assigned managed identity to use for SQL Server authentication. If not provided, the SQL Server will use its system-assigned managed identity."
-  type        = object({
-    type = optional(string, "SystemAssigned")
-    identity_ids = optional(list(string), [])
+  type = object({
+    type                              = optional(string, "SystemAssigned")
+    identity_ids                      = optional(list(string), [])
     primary_user_assigned_identity_id = optional(string)
-    create_role_assignment = optional(bool, true)
+    create_role_assignment            = optional(bool, true)
   })
-  default     = {}
+  default  = {}
   nullable = false
   validation {
-    condition = var.sql_server_identity.type == "SystemAssigned" || length(var.sql_server_identity.identity_ids) > 0
+    condition     = var.sql_server_identity.type == "SystemAssigned" || length(var.sql_server_identity.identity_ids) > 0
     error_message = "identity_ids must be specified if type includes UserAssigned"
   }
   validation {

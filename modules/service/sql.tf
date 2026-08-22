@@ -20,7 +20,7 @@ removed {
 
 # Grant Directory.Read.All to SQL Server's Managed Identity
 resource "azuread_app_role_assignment" "sql_directory_read_all" {
-  count               = var.sql_server_identity.create_role_assignment
+  count               = var.sql_server_identity.create_role_assignment ? 1 : 0
   app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
   principal_object_id = var.sql_server_identity.primary_user_assigned_identity_id == null ? azurerm_mssql_server.sql_server.identity[0].principal_id : var.sql_server_identity.primary_user_assigned_identity_id
   resource_object_id  = data.azuread_service_principal.msgraph.object_id
