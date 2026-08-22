@@ -204,6 +204,11 @@ resource "null_resource" "sql_user_setup" {
         throw "Web App name contains invalid characters"
       }
 
+      # Ensure Invoke-Sqlcmd is available (provided by the SqlServer module)
+      if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
+        Install-Module -Name SqlServer -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+      }
+
       # Authenticate to Azure using ARM env vars
       . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
