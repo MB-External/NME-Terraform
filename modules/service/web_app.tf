@@ -131,7 +131,7 @@ resource "azurerm_windows_web_app" "web_app_portal" {
 
 resource "null_resource" "download_package" {
   triggers = {
-    always_run = timestamp()
+    redeploy_trigger = var.app_package_redeploy_trigger
   }
 
   provisioner "local-exec" {
@@ -224,7 +224,7 @@ resource "null_resource" "download_package" {
 
 resource "null_resource" "stop_webjobs" {
   triggers = {
-    always_run = timestamp()
+    redeploy_trigger = var.app_package_redeploy_trigger
   }
 
   provisioner "local-exec" {
@@ -286,7 +286,7 @@ resource "null_resource" "stop_webjobs" {
 
 resource "null_resource" "deploy_package" {
   triggers = {
-    always_run = timestamp()
+    redeploy_trigger = var.app_package_redeploy_trigger
   }
 
   provisioner "local-exec" {
@@ -326,7 +326,7 @@ resource "null_resource" "deploy_package" {
 
 resource "null_resource" "start_webjobs" {
   triggers = {
-    always_run = timestamp()
+    redeploy_trigger = var.app_package_redeploy_trigger
   }
 
   provisioner "local-exec" {
@@ -369,7 +369,7 @@ resource "null_resource" "start_webjobs" {
 
 resource "null_resource" "health_check" {
   triggers = {
-    always_run = timestamp()
+    redeploy_trigger = var.app_package_redeploy_trigger
   }
 
   provisioner "local-exec" {

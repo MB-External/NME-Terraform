@@ -204,7 +204,11 @@ variable "app_package_local_path" {
     error_message = "app_package_local_path must point to a .zip file."
   }
 }
-
+variable "app_package_redeploy_trigger" {
+  description = "Optional string to force redeployment of the application package if changed"
+  type        = string
+  default     = "1"
+}
 variable "app_role_assignments" {
   description = "Optional map of app role names to lists of user principal names (emails) to assign to those roles. Roles: Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient"
   type        = map(list(string))

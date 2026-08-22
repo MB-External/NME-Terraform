@@ -291,6 +291,12 @@ variable "app_package_local_path" {
   }
 }
 
+variable "app_package_redeploy_trigger" {
+  description = "Optional string to force redeployment of the application package if changed"
+  type        = string
+  default     = "1"
+}
+
 variable "app_role_assignments" {
   description = "Map of app role names to lists of user principal names to assign"
   type        = map(list(string))
