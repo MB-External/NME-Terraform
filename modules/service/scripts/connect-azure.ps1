@@ -8,15 +8,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Check if there is already an authenticated account (e.g. logged in externally via az login or Connect-AzAccount)
 $existingContext = Get-AzContext -ErrorAction SilentlyContinue
 if ($existingContext -and $existingContext.Account) {
+    # Already authenticated externally; skip login
     Write-Verbose "Already authenticated as '$($existingContext.Account.Id)'. Skipping login."
-    Set-AzContext -Subscription $SubscriptionId | Out-Null
-    return
 }
-
-if ($env:ARM_CLIENT_SECRET) {
+elseif ($env:ARM_CLIENT_SECRET) {
     $securePassword = ConvertTo-SecureString $env:ARM_CLIENT_SECRET -AsPlainText -Force
     $credential = New-Object System.Management.Automation.PSCredential($env:ARM_CLIENT_ID, $securePassword)
     Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $env:ARM_TENANT_ID -Environment $Environment | Out-Null
@@ -51,5 +48,3 @@ elseif ($env:ARM_CLIENT_CERTIFICATE_PATH -or $env:ARM_CLIENT_CERTIFICATE) {
 else {
     throw "No Azure authentication method found. Set one of: ARM_CLIENT_SECRET, ARM_OIDC_TOKEN, ARM_CLIENT_CERTIFICATE_PATH, or ARM_CLIENT_CERTIFICATE"
 }
-
-Set-AzContext -Subscription $SubscriptionId | Out-Null
