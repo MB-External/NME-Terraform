@@ -155,9 +155,8 @@ resource "azurerm_private_endpoint" "sql_server_unmanaged_dns" {
     subresource_names              = ["sqlServer"]
   }
 
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [local.sql_dns_zone_id]
+  lifecycle {
+    ignore_changes = [ private_dns_zone_group ]
   }
 }
 
