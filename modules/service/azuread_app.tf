@@ -353,9 +353,14 @@ resource "azurerm_role_assignment" "nme_app_sp_certificates_officer" {
 # Role Assignments
 # --------------------------------------------------------------------------- #
 resource "azurerm_role_assignment" "nme_sp_reader" {
+  count                = var.assign_subscription_roles ? 1 : 0
   scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
   role_definition_name = "Reader"
   principal_id         = azuread_service_principal.nme_app.object_id
+}
+moved {
+  from = azurerm_role_assignment.nme_sp_reader
+  to   = azurerm_role_assignment.nme_sp_reader[0]
 }
 
 resource "azurerm_role_assignment" "nme_sp_contributor" {
@@ -365,9 +370,14 @@ resource "azurerm_role_assignment" "nme_sp_contributor" {
 }
 
 resource "azurerm_role_assignment" "nme_sp_backup_reader" {
+  count                = var.assign_subscription_roles ? 1 : 0
   scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
   role_definition_name = "Backup Reader"
   principal_id         = azuread_service_principal.nme_app.object_id
+}
+moved {
+  from = azurerm_role_assignment.nme_sp_backup_reader
+  to   = azurerm_role_assignment.nme_sp_backup_reader[0]
 }
 
 data "azuread_user" "role_assignees" {

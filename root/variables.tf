@@ -289,3 +289,10 @@ variable "read_write_deployment_principal_ids" {
   default     = []
   nullable    = false
 }
+
+variable "assign_subscription_roles" {
+  description = "Whether to assign subscription roles to the nme principal"
+  type        = bool
+  default     = true
+  nullable    = false
+}
