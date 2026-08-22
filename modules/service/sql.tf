@@ -8,6 +8,15 @@ data "azuread_application_published_app_ids" "well_known" {}
 data "azuread_service_principal" "msgraph" {
   client_id    = data.azuread_application_published_app_ids.well_known.result.MicrosoftGraph
 }
+removed {
+  from = azuread_service_principal.msgraph
+  # Previous versions of the module used a resource to access the Graph service principal,
+  # however this isn't needed as it is only used for read access, and doing so can be 
+  # destructive as it will attempt to delete the SP on destroy
+  lifecycle {
+    destroy = false
+  }
+}
 
 # Grant Directory.Read.All to SQL Server's Managed Identity
 resource "azuread_app_role_assignment" "sql_directory_read_all" {

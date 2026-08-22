@@ -192,6 +192,15 @@ data "azuread_service_principal" "arm_api" {
   count        = local.has_arm_api ? 1 : 0
   client_id    = local.arm_api_app_id[var.azure_environment]
 }
+removed {
+  from = azuread_service_principal.arm_api
+  # Previous versions of the module used a resource to access the ARM service principal,
+  # however this isn't needed as it is only used for read access, and doing so can be 
+  # destructive as it will attempt to delete the SP on destroy
+  lifecycle {
+    destroy = false
+  }
+}
 
 # --------------------------------------------------------------------------- #
 # Service Principal
