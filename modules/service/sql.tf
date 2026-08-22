@@ -36,7 +36,7 @@ resource "azurerm_mssql_server" "sql_server" {
     type = "SystemAssigned"
   }
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       displayName = "SqlServer"
     },
@@ -56,7 +56,7 @@ resource "azurerm_mssql_database" "database" {
 
   sku_name = var.database_sku_name
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       displayName     = "Database"
       NMW_OBJECT_TYPE = "PAAS"
@@ -98,7 +98,7 @@ resource "azurerm_private_dns_zone" "sql" {
   count               = local.create_dns_zones ? 1 : 0
   name                = local.sql_private_dns_zone_name
   resource_group_name = var.resource_group_name
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {}))
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
@@ -106,7 +106,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
   name                 = "${local.virtual_network_name}-link"
   private_dns_zone_id  = azurerm_private_dns_zone.sql[0].id
   virtual_network_id   = local.virtual_network_id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -115,7 +115,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "sql_deployment" {
   name                 = "${var.deployment_vnet_name}-deployment-link"
   private_dns_zone_id  = azurerm_private_dns_zone.sql[0].id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -125,7 +125,7 @@ resource "azurerm_private_endpoint" "sql_server" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.sql_server_name}-pls"
@@ -146,7 +146,7 @@ resource "azurerm_private_endpoint" "sql_server_unmanaged_dns" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.sql_server_name}-pls"

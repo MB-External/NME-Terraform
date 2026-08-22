@@ -16,10 +16,12 @@ resource "azurerm_automation_runbook" "nmw_update_run_as" {
 
   content = data.local_file.nmw_update_run_as_script.content
 
-  tags = lookup(
-    var.tags_by_resource,
-    "Microsoft.Automation/automationAccounts/runbooks",
-    {}
+  tags = merge(var.tags,
+    lookup(
+      var.tags_by_resource,
+      "Microsoft.Automation/automationAccounts/runbooks",
+      {}
+    )
   )
 }
 

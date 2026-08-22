@@ -62,6 +62,11 @@ variable "database_sku_name" {
   type        = string
 }
 
+variable "tags" {
+  description = "Map of tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
 variable "tags_by_resource" {
   description = "Map of resource type to tags. Allows applying specific tags to different Azure resource types"
   type        = map(map(string))

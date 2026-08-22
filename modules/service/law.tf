@@ -3,7 +3,7 @@ resource "azurerm_log_analytics_workspace" "law" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "LOG_ANALYTICS_WORKSPACE"
     },
@@ -22,7 +22,7 @@ resource "azurerm_monitor_data_collection_endpoint" "dce" {
 
   public_network_access_enabled = true
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "DATA_COLLECTION_ENDPOINT"
     },
@@ -119,7 +119,7 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
     }
   }
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "DATA_COLLECTION_RULE"
     },

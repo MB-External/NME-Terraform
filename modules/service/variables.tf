@@ -50,7 +50,11 @@ variable "database_sku_name" {
   description = "SQL database SKU name"
   type        = string
 }
-
+variable "tags" {
+  description = "Map of tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
 variable "tags_by_resource" {
   description = "Optional extra tags by resource"
   type        = map(map(string))

@@ -18,7 +18,7 @@ resource "azurerm_key_vault" "key_vault" {
     default_action = var.configure_private_endpoints ? "Deny" : "Allow"
   }
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "PAAS"
     },
@@ -118,7 +118,7 @@ resource "azurerm_private_dns_zone" "key_vault" {
   count               = local.create_dns_zones ? 1 : 0
   name                = local.key_vault_private_dns_zone_name
   resource_group_name = var.resource_group_name
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {}))
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
@@ -126,7 +126,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
   name                 = "${local.virtual_network_name}-link"
   private_dns_zone_id  = local.key_vault_dns_zone_id
   virtual_network_id   = local.virtual_network_id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -135,7 +135,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "key_vault_deployment" 
   name                 = "${var.deployment_vnet_name}-deployment-link"
   private_dns_zone_id  = local.key_vault_dns_zone_id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -145,7 +145,7 @@ resource "azurerm_private_endpoint" "key_vault" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.key_vault_name}-pls"
@@ -166,7 +166,7 @@ resource "azurerm_private_endpoint" "key_vault_unmanaged_dns" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.key_vault_name}-pls"

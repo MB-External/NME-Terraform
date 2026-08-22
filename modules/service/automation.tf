@@ -5,10 +5,12 @@ resource "azurerm_automation_account" "scripted_action" {
 
   sku_name = "Basic"
 
-  tags = lookup(
-    var.tags_by_resource,
-    "Microsoft.Automation/automationAccounts",
-    {}
+  tags = merge(var.tags,
+    lookup(
+      var.tags_by_resource,
+      "Microsoft.Automation/automationAccounts",
+      {}
+    )
   )
 }
 
@@ -23,10 +25,12 @@ resource "azurerm_automation_account" "automation" {
     type = "SystemAssigned"
   }
 
-  tags = lookup(
-    var.tags_by_resource,
-    "Microsoft.Automation/automationAccounts",
-    {}
+  tags = merge(var.tags,
+    lookup(
+      var.tags_by_resource,
+      "Microsoft.Automation/automationAccounts",
+      {}
+    )
   )
 }
 
@@ -88,7 +92,7 @@ resource "azurerm_private_dns_zone" "automation" {
   count               = local.create_dns_zones ? 1 : 0
   name                = local.automation_private_dns_zone_name
   resource_group_name = var.resource_group_name
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {}))
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "automation" {
@@ -96,7 +100,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "automation" {
   name                 = "${local.virtual_network_name}-link"
   private_dns_zone_id  = local.automation_dns_zone_id
   virtual_network_id   = local.virtual_network_id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -105,7 +109,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "automation_deployment"
   name                 = "${var.deployment_vnet_name}-deployment-link"
   private_dns_zone_id  = local.automation_dns_zone_id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -115,7 +119,7 @@ resource "azurerm_private_endpoint" "automation" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.scripted_action_account_name}-pls"
@@ -136,7 +140,7 @@ resource "azurerm_private_endpoint" "automation_unmanaged_dns" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.scripted_action_account_name}-pls"

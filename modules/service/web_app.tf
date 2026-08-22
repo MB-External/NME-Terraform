@@ -18,7 +18,7 @@ resource "azurerm_service_plan" "app_service_plan" {
   os_type  = "Windows"
   sku_name = var.app_service_plan_sku_name
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "PAAS"
     },
@@ -112,7 +112,7 @@ resource "azurerm_windows_web_app" "web_app_portal" {
     #WEBSITE_RUN_FROM_PACKAGE = 1
   }, local.optional_app_settings)
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       NMW_OBJECT_TYPE = "PAAS"
     },
@@ -425,7 +425,7 @@ resource "azurerm_private_endpoint" "web_app" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.web_app_portal_name}-pls"
@@ -446,7 +446,7 @@ resource "azurerm_private_endpoint" "web_app_unmanaged_dns" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = local.private_endpoints_subnet_id
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateEndpoints", {}))
 
   private_service_connection {
     name                           = "${var.web_app_portal_name}-pls"
@@ -464,7 +464,7 @@ resource "azurerm_private_dns_zone" "app_service" {
   count               = local.create_dns_zones ? 1 : 0
   name                = local.app_service_private_dns_zone_name
   resource_group_name = var.resource_group_name
-  tags                = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {})
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones", {}))
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "app_service" {
@@ -472,7 +472,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "app_service" {
   name                 = "${local.virtual_network_name}-link"
   private_dns_zone_id  = local.app_service_dns_zone_id
   virtual_network_id   = local.virtual_network_id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
 
@@ -481,6 +481,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "app_service_deployment
   name                 = "${var.deployment_vnet_name}-deployment-link"
   private_dns_zone_id  = local.app_service_dns_zone_id
   virtual_network_id   = data.azurerm_virtual_network.deployment_vnet[0].id
-  tags                 = lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {})
+  tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }

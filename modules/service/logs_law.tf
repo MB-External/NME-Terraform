@@ -3,7 +3,7 @@ resource "azurerm_log_analytics_workspace" "logs_law" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  tags = merge(
+  tags = merge(var.tags,
     {
       displayName = "LogAnalyticsWorkspace"
     },
