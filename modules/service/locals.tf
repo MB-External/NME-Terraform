@@ -96,4 +96,6 @@ locals {
   }
   has_arm_api = contains(keys(local.arm_api_app_id), var.azure_environment)
 
+  read_only_deployment_principal_ids  = var.read_only_deployment_principal_ids
+  read_write_deployment_principal_ids = length(var.read_write_deployment_principal_ids) > 0 ? var.read_write_deployment_principal_ids : [data.azurerm_client_config.current.object_id]
 }

@@ -12,7 +12,10 @@ azure_tag_prefix = "NMW"
 
 protect_resources = true
 
-# Optional: additional owners (object IDs) for the Entra ID application
+# Optional: additional owners (object IDs) for the Entra ID application.
+# In some environments this supports later automation using
+# Application.ReadWrite.OwnedBy for changes to this app instead of the
+# broader Application.ReadWrite.All permission.
 # azuread_app_owners = ["00000000-0000-0000-0000-000000000000"]
 
 # -----------------
@@ -67,6 +70,22 @@ key_vault_name = "{app-name}-kv-{unique_suffix}"
 data_protection_storage_account_name = "dps{unique_suffix}"
 data_protection_keys_blob_name = "keys-{unique_suffix}.xml"
 data_protection_key_name = "DataProtection-{unique_suffix}"
+
+# Optional: separate data-plane identities for read-only plan operations and
+# read-write apply operations. These currently control Key Vault data-plane
+# RBAC granted by the module.
+#
+# Read-only principals receive Key Vault Reader.
+# read_only_deployment_principal_ids = [
+#   "00000000-0000-0000-0000-000000000000"
+# ]
+#
+# Read-write principals receive Key Vault Crypto Officer, Key Vault Secrets
+# Officer, and Key Vault Certificates Officer. If left empty, the module uses
+# the current caller's object ID.
+# read_write_deployment_principal_ids = [
+#   "11111111-1111-1111-1111-111111111111"
+# ]
 
 # -----------------
 # Certificate

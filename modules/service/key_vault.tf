@@ -30,23 +30,33 @@ resource "azurerm_key_vault" "key_vault" {
   )
 }
 
-# Allow current deploying principal to create the data protection key and secrets (data plane).
+# Allow deploying principal(s) to create the data protection key and secrets (data plane).
 resource "azurerm_role_assignment" "key_vault_deployer_crypto_officer" {
+  for_each             = local.read_write_deployment_principal_ids
   scope                = azurerm_key_vault.key_vault.id
   role_definition_name = "Key Vault Crypto Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = each.value
 }
 
 resource "azurerm_role_assignment" "key_vault_deployer_secrets_officer" {
+  for_each             = local.read_write_deployment_principal_ids
   scope                = azurerm_key_vault.key_vault.id
   role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = each.value
 }
 
 resource "azurerm_role_assignment" "key_vault_deployer_certificates_officer" {
+  for_each             = local.read_write_deployment_principal_ids
   scope                = azurerm_key_vault.key_vault.id
   role_definition_name = "Key Vault Certificates Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = each.value
+}
+
+resource "azurerm_role_assignment" "key_vault_reader" {
+  for_each             = local.read_only_deployment_principal_ids
+  scope                = azurerm_key_vault.key_vault.id
+  role_definition_name = "Key Vault Reader"
+  principal_id         = each.value
 }
 
 # Allow webapp principal to access secrets, keys, and certificates (data plane).

@@ -64,6 +64,8 @@ module "service" {
   app_cert_name                        = var.app_cert_name
   app_cert_lifetime_months             = var.app_cert_lifetime_months
   app_package_redeploy_trigger         = var.app_package_redeploy_trigger
+  read_only_deployment_principal_ids   = var.read_only_deployment_principal_ids
+  read_write_deployment_principal_ids  = var.read_write_deployment_principal_ids
   existing_network_config              = var.existing_network_config
   tags                                 = var.tags
   sql_server_identity                  = var.sql_server_identity

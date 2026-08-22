@@ -331,3 +331,15 @@ variable "app_cert_lifetime_months" {
     error_message = "app_cert_lifetime_months must be a whole number between 1 and 297 (Key Vault supported range)."
   }
 }
+
+variable "read_only_deployment_principal_ids" {
+  description = "Set of principal IDs that will be granted read-only access to deployment-managed data plane resources, such as Key Vault. Allows for a read only plan account to be used that is seperate from the apply account."
+  type        = set(string)
+  default     = []
+}
+
+variable "read_write_deployment_principal_ids" {
+  description = "Set of principal IDs that will be granted read-write access to deployment-managed data plane resources, such as Key Vault. If empty, the current service principal will be used, which only works when the same account is used for plan and apply."
+  type        = set(string)
+  default     = []
+}

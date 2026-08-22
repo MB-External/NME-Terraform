@@ -90,6 +90,8 @@ The service principal used to run Terraform must have the following **Microsoft 
 | `Directory.Read.All` | Application | Read directory data | 
 | `User.Read` | Delegated | Sign in and read user profile | 
 
+`Application.ReadWrite.All` is the broad application-management permission assumed by this module for bootstrap and full lifecycle operations. Adding entries to `azuread_app_owners` can still be useful for consumers that later split responsibilities, because follow-on changes to the NME application may then be performed by automation using `Application.ReadWrite.OwnedBy` instead of `Application.ReadWrite.All`. That narrower pattern is environment-specific and left to consumers to implement.
+
 
 ### Terraform Providers
 
@@ -124,7 +126,7 @@ The `modules/service` module deploys and configures:
   - Windows Web App 
   - Package deployment pipeline
 - **Identity and access**
-  - Entra ID application + service principal, with optional additional app owners (`azuread_app_owners`)
+  - Entra ID application + service principal, with optional additional app owners (`azuread_app_owners`) to support owner-scoped application management patterns
   - Application password and certificate credential
   - App roles (Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient) and optional user role assignments
   - RBAC role assignments for the NME service principal
@@ -355,7 +357,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 |------|------|---------|-------------|
 | `protect_resources` | `bool` | `false` | Apply management locks to Key Vault, SQL Database, and Storage Account |
 | `database_max_size_gb` | `number` | `250` | Maximum size of the SQL database in GB |
-| `azuread_app_owners` | `set(string)` | `[]` | Object IDs of additional owners to assign to the Entra ID application |
+| `azuread_app_owners` | `set(string)` | `[]` | Object IDs of additional owners to assign to the Entra ID application. This can help consumers use `Application.ReadWrite.OwnedBy` for follow-on app changes instead of the broader `Application.ReadWrite.All` |
 | `tags` | `map(string)` | `{}` | Tags applied to every resource created by the module, merged with `tags_by_resource` |
 | `tags_by_resource` | `map(map(string))` | `{}` | Resource-type-specific tags |
 | `configure_private_endpoints` | `bool` | `false` | Whether to create private endpoints for services |
@@ -373,6 +375,8 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `app_package_redeploy_trigger` | `string` | `"1"` | Change this value to force the application package to be re-downloaded and redeployed on the next `apply`. Package deployment steps only run when this value changes, rather than on every `apply` |
 | `app_role_assignments` | `map(list(string))` | `{}` | Map of app role names to lists of user principal names to assign |
 | `private_endpoint_post_resolve_delay` | `number` | `0` | Extra delay in seconds after private endpoint connectivity is confirmed. Increase to 60–180 if first deploy with private endpoints fails with 403 errors on KV writes |
+| `read_only_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-only Key Vault data-plane access to. Intended for a lower-privilege identity used for `terraform plan` or other read-only validation flows |
+| `read_write_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-write Key Vault data-plane access to. Intended for the identity that runs `terraform apply`. Defaults to the current caller when not set |
 
 See `root/terraform.tfvars.example` for a complete starting-point configuration.
 
@@ -569,7 +573,7 @@ Two additional variables help align the deployment with centrally governed ident
 
 - `sql_server_identity` — use a centrally managed user-assigned identity for the SQL Server instead of (or alongside) its system-assigned identity, and optionally skip the module's `Directory.Read.All` role assignment if that permission is already granted centrally (`create_role_assignment = false`). `identity_ids` and `primary_user_assigned_identity_id` take the identity's ARM resource ID (not its object/principal ID) — the module resolves the object/principal ID itself when creating the role assignment.
 - `sql_azuread_administrator` — set the SQL Server's Entra ID administrator to a specific group or principal (e.g. a break-glass admin group) instead of defaulting to the deploying service principal.
-- `azuread_app_owners` — assign additional owners (e.g. a platform team group) to the Entra ID application created for NME.
+- `azuread_app_owners` — assign additional owners (e.g. a platform team group) to the Entra ID application created for NME. In some environments this supports a reduced-permission operating model where later application changes can use `Application.ReadWrite.OwnedBy` instead of the broader `Application.ReadWrite.All`.
 
 Where possible, prefer passing these values into this module from references already resolved in your own root module (for example from another module's outputs, data sources, or remote state) rather than maintaining duplicated literal IDs in tfvars. This module intentionally accepts plain values, so that wiring is left to consumers to implement in the way that best fits their platform composition.
 
@@ -688,6 +692,8 @@ Note that this is not a fully air-gapped install: the deployment still requires 
 - Exactly one of `network_config` or `existing_network_config` is required when `configure_private_endpoints = true`.
 - When `existing_network_config.manage_dns = false`, this module does not create, link, or write to any private DNS zone for the private endpoints — it is expected that a central process (typically an Azure Policy assignment) manages private DNS zone groups for the endpoints. The module still creates the private endpoints themselves and ignores changes to `private_dns_zone_group` on them.
 - Key Vault `purge_protection_enabled` is always `true` and cannot be disabled. Soft-deleted Key Vaults cannot be permanently purged before the retention period (90 days) expires; plan resource naming accordingly if you expect to redeploy under the same name.
+- `read_only_deployment_principal_ids` and `read_write_deployment_principal_ids` currently control **Key Vault data-plane RBAC** created by this module. Read-only principals receive `Key Vault Reader`. Read-write principals receive `Key Vault Crypto Officer`, `Key Vault Secrets Officer`, and `Key Vault Certificates Officer` so they can create and update the data protection key, secrets, and certificate material needed during deployment.
+- A common best-practice pattern is to run `terraform plan` with a dedicated lower-privilege identity included in `read_only_deployment_principal_ids`, and run `terraform apply` with a separate higher-privilege identity included in `read_write_deployment_principal_ids`. If `read_write_deployment_principal_ids` is left empty, the module falls back to the current caller's object ID.
 - The Microsoft Graph and ARM/Service Management API service principals are referenced via data sources rather than managed resources, so `terraform destroy` will never attempt to delete these shared, tenant-wide service principals.
 - On clean deployments with `configure_private_endpoints = true`, Azure may return **403 `ForbiddenByConnection`** errors when writing Key Vault secrets or keys. This happens because of race condition between private endpoint creation and DNS propagation. Two mitigation options:
   1. **Increase the post-resolve delay** — set `private_endpoint_post_resolve_delay = 60` (or higher) to add a wait buffer after DNS and TCP checks pass but before Terraform proceeds to write secrets.
