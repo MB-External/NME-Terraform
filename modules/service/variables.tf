@@ -125,6 +125,8 @@ variable "existing_network_config" {
       sql             = string
       data_protection = string
       automation      = string
+      key_vault       = string
+      app_service     = string
     }))
   })
   default = null

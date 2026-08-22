@@ -40,7 +40,6 @@ locals {
 
       sql_private_dns         = "privatelink.database.chinacloudapi.cn"
       blob_private_dns        = "privatelink.blob.core.chinacloudapi.cn"
-      file_private_dns        = "privatelink.file.core.chinacloudapi.cn"
       app_service_private_dns = "privatelink.chinacloudsites.cn"
       key_vault_private_dns   = "privatelink.vaultcore.azure.cn"
       automation_private_dns  = "privatelink.azure-automation.cn"
@@ -63,10 +62,16 @@ locals {
 
   sql_private_dns_zone_name         = local._env.sql_private_dns
   blob_private_dns_zone_name        = local._env.blob_private_dns
-  file_private_dns_zone_name        = local._env.file_private_dns
   app_service_private_dns_zone_name = local._env.app_service_private_dns
   key_vault_private_dns_zone_name   = local._env.key_vault_private_dns
   automation_private_dns_zone_name  = local._env.automation_private_dns
+
+  sql_dns_zone_id          = local.create_dns_zones ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.sql : null
+  blob_private_dns_zone_id = local.create_dns_zones ? azurerm_private_dns_zone.data_protection[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.data_protection : null
+  app_service_dns_zone_id  = local.create_dns_zones ? azurerm_private_dns_zone.app_service[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.app_service : null
+  key_vault_dns_zone_id    = local.create_dns_zones ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.key_vault : null
+  automation_dns_zone_id   = local.create_dns_zones ? azurerm_private_dns_zone.automation[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.automation : null
+
 
   private_endpoints_subnet_id = var.configure_private_endpoints ? (var.network_config != null ? azurerm_subnet.private_endpoints[0].id : data.azurerm_subnet.private_endpoints[0].id) : null
   app_subnet_id               = var.configure_private_endpoints ? (var.network_config != null ? azurerm_subnet.app[0].id : data.azurerm_subnet.app[0].id) : null
@@ -82,11 +87,6 @@ locals {
   create_dns_zones                      = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.create_dns_zones) : false
   link_dns_zones                        = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.link_dns_zones) : false
   manage_dns                            = var.configure_private_endpoints ? (var.network_config != null ? true : var.existing_network_config.manage_dns) : false
-  app_service_dns_zone_id               = local.create_dns_zones ? azurerm_private_dns_zone.app_service[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.app_service : null
-  automation_dns_zone_id                = local.create_dns_zones ? azurerm_private_dns_zone.automation[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.automation : null
-  sql_dns_zone_id                       = local.create_dns_zones ? azurerm_private_dns_zone.sql[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.sql : null
-  data_protection_dns_zone_id           = local.create_dns_zones ? azurerm_private_dns_zone.data_protection[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.data_protection : null
-  key_vault_dns_zone_id                 = local.create_dns_zones ? azurerm_private_dns_zone.key_vault[0].id : var.existing_network_config.manage_dns ? var.existing_network_config.dns_zone_ids.key_vault : null
   deploy_private_endpoint_managed_dns   = var.configure_private_endpoints && (var.network_config != null || var.existing_network_config.manage_dns)
   deploy_private_endpoint_unmanaged_dns = var.configure_private_endpoints && var.existing_network_config != null && !var.existing_network_config.manage_dns
   private_endpoint_app_service_id       = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.web_app[0].id : azurerm_private_endpoint.web_app_unmanaged_dns[0].id : null
