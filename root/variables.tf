@@ -103,6 +103,24 @@ variable "network_config" {
   })
   default = null
 }
+variable "existing_network_config" {
+  description = "Existing network configuration for private endpoints. Required when configure_private_endpoints = true and network_config is not provided."
+  type = object({
+    vnet_name           = string
+    pe_subnet_name      = string
+    app_subnet_name     = string
+    resource_group_name = string
+    manage_dns          = optional(bool, true)
+    create_dns_zones    = optional(bool, true)
+    link_dns_zones      = optional(bool, true)
+    dns_zone_ids = optional(object({
+      sql             = string
+      data_protection = string
+      automation      = string
+    }))
+  })
+  default = null
+}
 
 variable "private_web_app" {
   description = "Whether the Web App should be accessible only via private endpoint"
@@ -125,10 +143,16 @@ variable "sql_server_name" {
   type        = string
 }
 
-variable "sql_server_user_assigned_identity_object_id" {
+variable "sql_server_identity" {
   description = "Object ID of the user-assigned managed identity to use for SQL Server authentication. If not provided, the SQL Server will use its system-assigned managed identity."
-  type        = string
-  default     = null
+  type = object({
+    type                              = optional(string, "SystemAssigned")
+    identity_ids                      = optional(list(string), [])
+    primary_user_assigned_identity_id = optional(string)
+    create_role_assignment            = optional(bool, true)
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "database_name" {
@@ -204,17 +228,18 @@ variable "app_package_local_path" {
     error_message = "app_package_local_path must point to a .zip file."
   }
 }
+
 variable "app_package_redeploy_trigger" {
   description = "Optional string to force redeployment of the application package if changed"
   type        = string
   default     = "1"
 }
+
 variable "app_role_assignments" {
   description = "Optional map of app role names to lists of user principal names (emails) to assign to those roles. Roles: Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient"
   type        = map(list(string))
   default     = {}
 }
-
 
 variable "private_endpoint_post_resolve_delay" {
   description = "Extra delay in seconds after private endpoint DNS resolves and TCP connectivity is confirmed. Increase (e.g. 30-60) if first apply with private endpoints fails with 403 errors."
