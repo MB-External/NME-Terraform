@@ -1,3 +1,8 @@
+locals {
+  private_endpoint_dns_delay_seconds = local.manage_dns ? 30 : 10
+  private_endpoint_dns_max_attempts   = 60
+}
+
 resource "null_resource" "wait_for_key_vault_private_dns" {
   count = var.configure_private_endpoints ? 1 : 0
 
@@ -13,7 +18,7 @@ resource "null_resource" "wait_for_key_vault_private_dns" {
 
   provisioner "local-exec" {
     interpreter = ["pwsh", "-Command"]
-    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts 60 -DelaySeconds 10 -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
+    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts ${local.private_endpoint_dns_max_attempts} -DelaySeconds ${local.private_endpoint_dns_delay_seconds} -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
   }
 
   depends_on = [
@@ -40,7 +45,7 @@ resource "null_resource" "wait_for_sql_private_dns" {
 
   provisioner "local-exec" {
     interpreter = ["pwsh", "-Command"]
-    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts 60 -DelaySeconds 10 -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
+    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts ${local.private_endpoint_dns_max_attempts} -DelaySeconds ${local.private_endpoint_dns_delay_seconds} -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
   }
 
   depends_on = [
@@ -67,7 +72,7 @@ resource "null_resource" "wait_for_app_service_private_dns" {
 
   provisioner "local-exec" {
     interpreter = ["pwsh", "-Command"]
-    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts 60 -DelaySeconds 10 -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
+    command     = "& '${path.module}/scripts/wait-for-private-endpoint.ps1' -Fqdn '${self.triggers.fqdn}' -Port ${self.triggers.port} -MaxAttempts ${local.private_endpoint_dns_max_attempts} -DelaySeconds ${local.private_endpoint_dns_delay_seconds} -PostResolveDelaySeconds ${var.private_endpoint_post_resolve_delay}"
   }
 
   depends_on = [
