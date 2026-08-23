@@ -357,6 +357,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 |------|------|---------|-------------|
 | `protect_resources` | `bool` | `false` | Apply management locks to Key Vault, SQL Database, and Storage Account |
 | `database_max_size_gb` | `number` | `250` | Maximum size of the SQL database in GB |
+| `database_license_type` | `string` | `"LicenseIncluded"` | SQL database license model. Use `LicenseIncluded` to include licensing in Azure cost, or `BasePrice` to use Azure Hybrid Benefit |
 | `azuread_app_owners` | `set(string)` | `[]` | Object IDs of additional owners to assign to the Entra ID application. This can help consumers use `Application.ReadWrite.OwnedBy` for follow-on app changes instead of the broader `Application.ReadWrite.All` |
 | `tags` | `map(string)` | `{}` | Tags applied to every resource created by the module, merged with `tags_by_resource` |
 | `tags_by_resource` | `map(map(string))` | `{}` | Resource-type-specific tags |

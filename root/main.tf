@@ -37,6 +37,7 @@ module "service" {
   sql_collation                        = var.sql_collation
   database_max_size_gb                 = var.database_max_size_gb
   database_sku_name                    = var.database_sku_name
+  database_license_type                = var.database_license_type
   tags_by_resource                     = var.tags_by_resource
   configure_private_endpoints          = var.configure_private_endpoints
   deployment_vnet_name                 = var.deployment_vnet_name

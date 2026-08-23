@@ -35,6 +35,13 @@ variable "app_service_plan_sku_name" {
   type        = string
 }
 
+variable "app_service_plan_license" {
+  description = "The license type of the App Service Plan, set to BasePrice to "
+  type        = string
+  default     = "LicenseIncluded"
+  nullable    = false
+}
+
 variable "sql_collation" {
   description = "The database collation"
   type        = string

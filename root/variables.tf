@@ -62,6 +62,13 @@ variable "database_sku_name" {
   type        = string
 }
 
+variable "database_license_type" {
+  description = "The license type of the SQL database, set to BasePrice to use Hybrid Benefit, or LicenseIncluded to pay for the license in Azure"
+  type        = string
+  default     = "LicenseIncluded"
+  nullable    = false
+}
+
 variable "tags" {
   description = "Map of tags to apply to all resources"
   type        = map(string)
