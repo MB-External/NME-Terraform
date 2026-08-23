@@ -18,6 +18,16 @@ protect_resources = true
 # broader Application.ReadWrite.All permission.
 # azuread_app_owners = ["00000000-0000-0000-0000-000000000000"]
 
+# Optional: manage the subscription-level RBAC assignments for the NME
+# principal outside this module if your landing zone or platform pipeline
+# handles them separately.
+# assign_subscription_roles = true
+
+# Optional: enable zone redundancy for the App Service Plan and SQL
+# Database. Requires a supported region and compatible SKUs, and will
+# increase the deployment cost.
+# enable_zone_redundancy = false
+
 # -----------------
 # Application
 # -----------------

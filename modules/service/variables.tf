@@ -347,8 +347,23 @@ variable "read_write_deployment_principal_ids" {
 }
 
 variable "assign_subscription_roles" {
-  description = "Whether to assign subscription roles to the nme principal"
+  description = "Whether to assign subscription roles to the nme principal. Set to false if you want to manage subscription roles outside of this module."
   type        = bool
   default     = true
   nullable    = false
+}
+
+variable "enable_zone_redundancy" {
+  description = "Whether to enable zone redundancy for SQL Server & App Service. This requires that the region supports zone redundancy for these services and will increase the cost of the deployment"
+  type        = bool
+  default     = false
+  nullable    = false
+  validation {
+    condition     = var.enable_zone_redundancy == false || contains(substr(var.app_service_plan_sku_name, 0, 1), ["P", "I"])
+    error_message = "app_service_plan_sku_name must be a SKU that supports zone redundancy when enable_zone_redundancy is true. See https://learn.microsoft.com/azure/reliability/reliability-app-service"
+  }
+  validation {
+    condition     = var.enable_zone_redundancy == false || startswith(var.database_sku_name, "BC_") || startswith(var.database_sku_name, "P")
+    error_message = "database_sku_name must be a SKU that supports zone redundancy when enable_zone_redundancy is true. See https://learn.microsoft.com/azure/reliability/reliability-sql-database"
+  }
 }

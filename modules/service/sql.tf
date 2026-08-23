@@ -75,7 +75,8 @@ resource "azurerm_mssql_database" "database" {
   collation   = var.sql_collation
   max_size_gb = var.database_max_size_gb
 
-  sku_name = var.database_sku_name
+  sku_name       = var.database_sku_name
+  zone_redundant = var.enable_zone_redundancy
 
   tags = merge(var.tags,
     {

@@ -15,8 +15,10 @@ resource "azurerm_service_plan" "app_service_plan" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  os_type  = "Windows"
-  sku_name = var.app_service_plan_sku_name
+  os_type                = "Windows"
+  sku_name               = var.app_service_plan_sku_name
+  zone_balancing_enabled = var.enable_zone_redundancy
+  worker_count           = var.enable_zone_redundancy ? 2 : 1
 
   tags = merge(var.tags,
     {

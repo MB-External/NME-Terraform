@@ -296,3 +296,10 @@ variable "assign_subscription_roles" {
   default     = true
   nullable    = false
 }
+
+variable "enable_zone_redundancy" {
+  description = "Whether to enable zone redundancy for SQL Server & App Service. This requires that the region supports zone redundancy for these services and will increase the cost of the deployment"
+  type        = bool
+  default     = false
+  nullable    = false
+}

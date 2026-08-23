@@ -129,7 +129,7 @@ The `modules/service` module deploys and configures:
   - Entra ID application + service principal, with optional additional app owners (`azuread_app_owners`) to support owner-scoped application management patterns
   - Application password and certificate credential
   - App roles (Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient) and optional user role assignments
-  - RBAC role assignments for the NME service principal
+  - RBAC role assignments for the NME service principal, with optional opt-out via `assign_subscription_roles`
 - **Database**
   - Azure SQL Server + database
   - Entra ID admin configuration — defaults to the deploying service principal, or a custom principal via `sql_azuread_administrator`
@@ -374,6 +374,8 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `app_package_local_path` | `string` | `null` | Absolute path to a pre-downloaded NME application package `.zip` on the machine running Terraform. When set, the maintenance service is not contacted (offline/disconnected install). The package archive must contain `app.zip` and related deployment files |
 | `app_package_redeploy_trigger` | `string` | `"1"` | Change this value to force the application package to be re-downloaded and redeployed on the next `apply`. Package deployment steps only run when this value changes, rather than on every `apply` |
 | `app_role_assignments` | `map(list(string))` | `{}` | Map of app role names to lists of user principal names to assign |
+| `assign_subscription_roles` | `bool` | `true` | Assign the subscription-level roles required by the NME principal. Set to `false` if you manage those role assignments outside this module |
+| `enable_zone_redundancy` | `bool` | `false` | Enable zone redundancy for the App Service Plan and SQL Database. Requires a supported region and compatible SKUs, and increases deployment cost |
 | `private_endpoint_post_resolve_delay` | `number` | `0` | Extra delay in seconds after private endpoint connectivity is confirmed. Increase to 60–180 if first deploy with private endpoints fails with 403 errors on KV writes |
 | `read_only_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-only Key Vault data-plane access to. Intended for a lower-privilege identity used for `terraform plan` or other read-only validation flows |
 | `read_write_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-write Key Vault data-plane access to. Intended for the identity that runs `terraform apply`. Defaults to the current caller when not set |
