@@ -35,13 +35,6 @@ variable "app_service_plan_sku_name" {
   type        = string
 }
 
-variable "app_service_plan_license" {
-  description = "The license type of the App Service Plan, set to BasePrice to "
-  type        = string
-  default     = "LicenseIncluded"
-  nullable    = false
-}
-
 variable "sql_collation" {
   description = "The database collation"
   type        = string
@@ -56,6 +49,12 @@ variable "database_max_size_gb" {
 variable "database_sku_name" {
   description = "SQL database SKU name"
   type        = string
+}
+variable "database_license_type" {
+  description = "The license type of the SQL database, set to BasePrice to use Hybrid Benefit, or LicenseIncluded to pay for the license in Azure"
+  type        = string
+  default     = "LicenseIncluded"
+  nullable    = false
 }
 variable "tags" {
   description = "Map of tags to apply to all resources"
@@ -366,7 +365,7 @@ variable "enable_zone_redundancy" {
   default     = false
   nullable    = false
   validation {
-    condition     = var.enable_zone_redundancy == false || contains(substr(var.app_service_plan_sku_name, 0, 1), ["P", "I"])
+    condition     = var.enable_zone_redundancy == false || contains(["P", "I"], substr(var.app_service_plan_sku_name, 0, 1))
     error_message = "app_service_plan_sku_name must be a SKU that supports zone redundancy when enable_zone_redundancy is true. See https://learn.microsoft.com/azure/reliability/reliability-app-service"
   }
   validation {

@@ -77,6 +77,7 @@ resource "azurerm_mssql_database" "database" {
 
   sku_name       = var.database_sku_name
   zone_redundant = var.enable_zone_redundancy
+  license_type = var.database_license_type
 
   tags = merge(var.tags,
     {
