@@ -141,7 +141,7 @@ The `modules/service` module deploys and configures:
   - Data protection key
   - Secrets for SQL connection string, Entra ID client secret, data protection blob path, locks container SAS URL
 - **Storage**
-  - Data protection storage account
+  - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS)
   - Private containers for data protection keys and locks
 - **Automation**
   - Two Automation Accounts (updates and scripted actions)
@@ -375,7 +375,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `app_package_redeploy_trigger` | `string` | `"1"` | Change this value to force the application package to be re-downloaded and redeployed on the next `apply`. Package deployment steps only run when this value changes, rather than on every `apply` |
 | `app_role_assignments` | `map(list(string))` | `{}` | Map of app role names to lists of user principal names to assign |
 | `assign_subscription_roles` | `bool` | `true` | Assign the subscription-level roles required by the NME principal. Set to `false` if you manage those role assignments outside this module |
-| `enable_zone_redundancy` | `bool` | `false` | Enable zone redundancy for the App Service Plan and SQL Database. Requires a supported region and compatible SKUs, and increases deployment cost |
+| `enable_zone_redundancy` | `bool` | `false` | Enable zone redundancy for the App Service Plan and SQL Database. Also switches the data protection storage account to GZRS in paired regions. Requires a supported region and compatible SKUs, and increases deployment cost |
 | `private_endpoint_post_resolve_delay` | `number` | `0` | Extra delay in seconds after private endpoint connectivity is confirmed. Increase to 60–180 if first deploy with private endpoints fails with 403 errors on KV writes |
 | `read_only_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-only Key Vault data-plane access to. Intended for a lower-privilege identity used for `terraform plan` or other read-only validation flows |
 | `read_write_deployment_principal_ids` | `set(string)` | `[]` | Principal object IDs to grant read-write Key Vault data-plane access to. Intended for the identity that runs `terraform apply`. Defaults to the current caller when not set |

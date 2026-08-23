@@ -18,7 +18,7 @@ locals {
     "spaincentral",
   ])
 
-  storage_replication_type = contains(local.unpaired_regions, lower(var.location)) ? "ZRS" : "GRS"
+  storage_replication_type = contains(local.unpaired_regions, lower(var.location)) ? "ZRS" : var.enable_zone_redundancy ? "GZRS" : "GRS"
 }
 
 # SAS tokens (Terraform equivalent of listServiceSas)

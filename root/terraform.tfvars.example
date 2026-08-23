@@ -24,8 +24,9 @@ protect_resources = true
 # assign_subscription_roles = true
 
 # Optional: enable zone redundancy for the App Service Plan and SQL
-# Database. Requires a supported region and compatible SKUs, and will
-# increase the deployment cost.
+# Database. In paired regions this also switches the data protection
+# storage account from GRS to GZRS. Requires a supported region and
+# compatible SKUs, and will increase the deployment cost.
 # enable_zone_redundancy = false
 
 # -----------------
