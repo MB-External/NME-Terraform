@@ -289,7 +289,7 @@ resource "null_resource" "sql_user_setup" {
 
 resource "azurerm_role_assignment" "sql_server_cmk" {
   role_definition_name = "Key Vault Crypto Service Encryption User"
-  scope                = azurerm_key_vault_key.sql_server_cmk.resource_id
+  scope                = azurerm_key_vault_key.sql_server_cmk.resource_versionless_id
   principal_id         = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].principal_id : data.azurerm_user_assigned_identity.sql_server_primary[0].principal_id
 }
 resource "time_offset" "sql_server_encryption" {

@@ -89,7 +89,7 @@ resource "azurerm_private_endpoint" "custom_scripts_storage_blob_unmanaged_dns" 
 
 resource "azurerm_role_assignment" "custom_scripts_cmk" {
   role_definition_name = "Key Vault Crypto Service Encryption User"
-  scope                = azurerm_key_vault_key.data_protection_cmk.resource_id
+  scope                = azurerm_key_vault_key.data_protection_cmk.resource_versionless_id
   principal_id         = azurerm_user_assigned_identity.data_protection.principal_id
 }
 
