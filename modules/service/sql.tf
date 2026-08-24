@@ -72,7 +72,7 @@ resource "azurerm_mssql_server" "sql_server" {
     identity_ids = var.sql_server_identity_id == null ? [azurerm_user_assigned_identity.sql_server[0].id] : [var.sql_server_identity_id]
   }
   primary_user_assigned_identity_id            = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].id : var.sql_server_identity_id
-  transparent_data_encryption_key_vault_key_id = azurerm_key_vault_key.sql_server_cmk.versionless_id
+  transparent_data_encryption_key_vault_key_id = azurerm_key_vault_key.sql_server_cmk.id
 
   tags = merge(var.tags,
     {
@@ -292,11 +292,9 @@ resource "azurerm_role_assignment" "sql_server_cmk" {
   scope                = azurerm_key_vault_key.sql_server_cmk.resource_versionless_id
   principal_id         = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].principal_id : data.azurerm_user_assigned_identity.sql_server_primary[0].principal_id
 }
-resource "time_offset" "sql_server_encryption" {
-  offset_months = 18
-}
-
 resource "azurerm_key_vault_key" "sql_server_cmk" {
+  # Rotation of the SQL Server CMK is not recomended and does not add any value as it is not possible to rotate the TDE key without manually re-encrypting by moving it to a new server
+  # https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-remove-tde-protector
   name         = "${var.sql_server_name}-cmk"
   key_vault_id = azurerm_key_vault.key_vault.id
   key_type     = "RSA"
@@ -307,19 +305,6 @@ resource "azurerm_key_vault_key" "sql_server_cmk" {
     "wrapKey",
   ]
 
-  rotation_policy {
-    automatic {
-      time_after_creation = "P12M"
-    }
-    expire_after         = "P18M"
-    notify_before_expiry = "P1M"
-  }
-  expiration_date = time_offset.sql_server_encryption.rfc3339
-  lifecycle {
-    ignore_changes = [
-      expiration_date
-    ]
-  }
   depends_on = [
     azurerm_role_assignment.key_vault_deployer_crypto_officer,
     null_resource.wait_for_key_vault_private_dns,
