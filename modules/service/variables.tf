@@ -356,3 +356,8 @@ variable "custom_scripts_storage_account_name" {
   description = "Storage Account for Custom Scripts"
   type        = string
 }
+
+variable "network_security_perimeter_name" {
+  description = "Name of the Network Security Perimeter to create for the deployment"
+  type        = string
+}

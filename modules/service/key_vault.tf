@@ -11,11 +11,11 @@ resource "azurerm_key_vault" "key_vault" {
   purge_protection_enabled   = true
   rbac_authorization_enabled = true
 
-  public_network_access_enabled = var.configure_private_endpoints ? false : true
+  public_network_access_enabled = false
 
   network_acls {
     bypass         = "AzureServices"
-    default_action = var.configure_private_endpoints ? "Deny" : "Allow"
+    default_action = "Deny"
   }
 
   tags = merge(var.tags,
@@ -195,4 +195,12 @@ resource "azurerm_private_endpoint" "key_vault_unmanaged_dns" {
   lifecycle {
     ignore_changes = [private_dns_zone_group]
   }
+}
+
+resource "azurerm_network_security_perimeter_association" "key_vault" {
+  name        = "key-vault-nsp-association"
+  access_mode = "Enforced"
+
+  network_security_perimeter_profile_id = azurerm_network_security_perimeter_profile.default.id
+  resource_id                           = azurerm_key_vault.key_vault.id
 }

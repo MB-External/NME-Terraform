@@ -93,14 +93,16 @@ resource "azurerm_storage_account" "data_protection" {
 
   public_network_access_enabled = var.configure_private_endpoints ? false : true
 
-  infrastructure_encryption_enabled = false
+  infrastructure_encryption_enabled = true
+  queue_encryption_key_type         = "Service"
+  table_encryption_key_type         = "Service"
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.data_protection.id]
   }
   customer_managed_key {
     user_assigned_identity_id = azurerm_user_assigned_identity.data_protection.id
-    key_vault_key_id          = azurerm_key_vault_key.data_protection_cmk.id
+    key_vault_key_id          = azurerm_key_vault_key.data_protection_cmk.versionless_id
   }
 
   network_rules {
@@ -118,6 +120,14 @@ resource "azurerm_storage_account" "data_protection" {
   depends_on = [
     azurerm_role_assignment.data_protection_cmk,
   ]
+  lifecycle {
+    # Ignore changes to encryption settings to avoid recreation of the storage account
+    ignore_changes = [
+      queue_encryption_key_type,
+      table_encryption_key_type,
+      infrastructure_encryption_enabled,
+    ]
+  }
 }
 
 resource "azurerm_storage_container" "dp_keys" {

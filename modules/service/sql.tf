@@ -72,7 +72,7 @@ resource "azurerm_mssql_server" "sql_server" {
     identity_ids = var.sql_server_identity_id == null ? [azurerm_user_assigned_identity.sql_server[0].id] : [var.sql_server_identity_id]
   }
   primary_user_assigned_identity_id            = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].id : var.sql_server_identity_id
-  transparent_data_encryption_key_vault_key_id = azurerm_key_vault_key.sql_server_cmk.id
+  transparent_data_encryption_key_vault_key_id = azurerm_key_vault_key.sql_server_cmk.versionless_id
 
   tags = merge(var.tags,
     {

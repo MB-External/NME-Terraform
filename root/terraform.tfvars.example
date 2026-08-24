@@ -78,6 +78,7 @@ database_sku_name = "S1"
 key_vault_name = "{app-name}-kv-{unique_suffix}"
 data_protection_storage_account_name = "dps{unique_suffix}"
 custom_scripts_storage_account_name = "cssa{unique_suffix}"
+network_security_perimeter_name = "{app-name}-nsp-{unique_suffix}"
 data_protection_keys_blob_name = "keys-{unique_suffix}.xml"
 data_protection_key_name = "DataProtection-{unique_suffix}"
 

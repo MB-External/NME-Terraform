@@ -10,7 +10,7 @@ resource "azurerm_automation_account" "scripted_action" {
     identity_ids = [azurerm_user_assigned_identity.scripted_action.id]
   }
   encryption {
-    key_vault_key_id          = azurerm_key_vault_key.scripted_action_cmk.id
+    key_vault_key_id          = azurerm_key_vault_key.scripted_action_cmk.versionless_id
     user_assigned_identity_id = azurerm_user_assigned_identity.scripted_action.id
   }
 
@@ -39,7 +39,7 @@ resource "azurerm_automation_account" "automation" {
     identity_ids = [azurerm_user_assigned_identity.automation.id]
   }
   encryption {
-    key_vault_key_id          = azurerm_key_vault_key.automation_cmk.id
+    key_vault_key_id          = azurerm_key_vault_key.automation_cmk.versionless_id
     user_assigned_identity_id = azurerm_user_assigned_identity.automation.id
   }
 
@@ -106,7 +106,7 @@ resource "azurerm_role_assignment" "automation_contributor" {
   scope = azurerm_windows_web_app.web_app_portal.id
 
   role_definition_name = "Contributor"
-  principal_id         = azurerm_automation_account.automation.identity[0].principal_id
+  principal_id         = azurerm_user_assigned_identity.automation.principal_id
 }
 
 resource "azurerm_private_dns_zone" "automation" {

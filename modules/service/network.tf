@@ -86,3 +86,21 @@ resource "azurerm_virtual_network_peering" "private_to_deployment" {
   remote_virtual_network_id    = data.azurerm_virtual_network.deployment_vnet[0].id
   allow_virtual_network_access = true
 }
+
+resource "azurerm_network_security_perimeter" "this" {
+  name                = var.network_security_perimeter_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+}
+
+resource "azurerm_network_security_perimeter_profile" "default" {
+  name                          = "defaultProfile"
+  network_security_perimeter_id = azurerm_network_security_perimeter.this.id
+}
+
+resource "azurerm_network_security_perimeter_access_rule" "subscription" {
+  name                          = "subscription"
+  network_security_perimeter_profile_id = azurerm_network_security_perimeter_profile.default.id
+  direction                    = "Inbound"
+  subscription_ids              = [data.azurerm_client_config.current.subscription_id]
+}

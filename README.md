@@ -144,8 +144,8 @@ The `modules/service` module deploys and configures:
   - Customer-managed encryption keys for SQL Server, data protection storage, and both Automation Accounts
   - Secrets for SQL connection string, Entra ID client secret, data protection blob path, locks container SAS URL
 - **Storage**
-  - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK using a user-assigned identity
-  - Custom scripts storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK using a user-assigned identity
+  - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK and infrastructure double-encryption using a user-assigned identity
+  - Custom scripts storage account (same replication / encryption behaviour as data protection storage)
   - Private containers for data protection keys and locks
 - **Automation**
   - Two Automation Accounts (updates and scripted actions), each encrypted with CMK and configured with a user-assigned identity
@@ -160,6 +160,7 @@ The `modules/service` module deploys and configures:
   - VNet peering to a deployment VNet (optional — not needed when the deployment machine already has network line of sight to the existing VNet, e.g. via hub-spoke peering)
   - Private DNS zones + VNet links managed by the module, or left unmanaged (`manage_dns = false`) when a central platform (e.g. Azure Policy) manages private DNS zone groups
   - Private endpoints for Web App, SQL, Key Vault, Data Protection Storage (blob), Custom Scripts Storage (blob), Automation
+  - Network Security Perimeter (NSP) protecting Key Vault with an inbound subscription-level access rule
 - **Protection (optional)**
   - Management locks for Key Vault, SQL database, and data protection storage account
 - **Tagging**
@@ -207,6 +208,7 @@ database_max_size_gb = 250
 key_vault_name                         = "nme-kv-prod"
 data_protection_storage_account_name   = "nmepdprod001"
 custom_scripts_storage_account_name    = "nmecscripts001"
+network_security_perimeter_name        = "nme-nsp-prod"
 data_protection_keys_blob_name         = "keys-prod.xml"
 data_protection_key_name               = "DataProtection-prod"
 
@@ -349,6 +351,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `scripted_action_account_name` | `string` | Name for the Automation Account (scripted actions) |
 | `data_protection_storage_account_name` | `string` | Name for the Storage Account (data protection keys) |
 | `custom_scripts_storage_account_name` | `string` | Name for the Storage Account used by custom script actions |
+| `network_security_perimeter_name` | `string` | Name for the Network Security Perimeter resource that protects Key Vault |
 | `data_protection_keys_blob_name` | `string` | Name of the blob file where data protection keys are stored |
 
 ### Optional
@@ -464,8 +467,8 @@ Each private endpoint gets a corresponding private DNS zone linked to the NME VN
 Once private endpoints are enabled, the following resources reject traffic originating from outside the VNet:
 
 - **SQL Server** — `public_network_access_enabled = false`; no firewall rules are created.
-- **Key Vault** — `public_network_access_enabled = false`; network ACL default action is `Deny`.
-- **Storage Account** — `public_network_access_enabled = false`.
+- **Key Vault** — always `public_network_access_enabled = false` with network ACL `Deny` (regardless of `configure_private_endpoints`). Access is permitted via a Network Security Perimeter with a subscription-level inbound rule, or via private endpoint when `configure_private_endpoints = true`.
+- **Storage Accounts** — `public_network_access_enabled = false` when private endpoints are enabled.
 
 Terraform needs to reach these resources during deployment (e.g., to bootstrap the SQL user, write Key Vault secrets, and upload blobs). If Terraform runs from a machine that is not on a network peered to the NME VNet, those operations will fail with network connectivity errors.
 
@@ -698,6 +701,7 @@ Note that this is not a fully air-gapped install: the deployment still requires 
 - Exactly one of `network_config` or `existing_network_config` is required when `configure_private_endpoints = true`.
 - When `existing_network_config.manage_dns = false`, this module does not create, link, or write to any private DNS zone for the private endpoints — it is expected that a central process (typically an Azure Policy assignment) manages private DNS zone groups for the endpoints. The module still creates the private endpoints themselves and ignores changes to `private_dns_zone_group` on them.
 - Key Vault `purge_protection_enabled` is always `true` and cannot be disabled. Soft-deleted Key Vaults cannot be permanently purged before the retention period (90 days) expires; plan resource naming accordingly if you expect to redeploy under the same name.
+- Key Vault public network access is **always disabled** (`public_network_access_enabled = false`, network ACL default action `Deny`), even when `configure_private_endpoints = false`. The module creates a Network Security Perimeter (NSP) with an inbound subscription-level access rule so that resources and service principals within the same Azure subscription can still reach Key Vault without requiring a private endpoint. Ensure the `Microsoft.Network` resource provider is registered and NSP is available in the target region.
 - `read_only_deployment_principal_ids` and `read_write_deployment_principal_ids` currently control **Key Vault data-plane RBAC** created by this module. Read-only principals receive `Key Vault Reader`. Read-write principals receive `Key Vault Crypto Officer`, `Key Vault Secrets Officer`, and `Key Vault Certificates Officer` so they can create and update the data protection key, secrets, and certificate material needed during deployment.
 - `custom_scripts_storage_account_name` is required and must be globally unique, 3-24 characters, and lower-case alphanumeric. For naming guidance specific to custom script actions
 - A common best-practice pattern is to run `terraform plan` with a dedicated lower-privilege identity included in `read_only_deployment_principal_ids`, and run `terraform apply` with a separate higher-privilege identity included in `read_write_deployment_principal_ids`. If `read_write_deployment_principal_ids` is left empty, the module falls back to the current caller's object ID.

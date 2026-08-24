@@ -75,4 +75,5 @@ module "service" {
   assign_subscription_roles            = var.assign_subscription_roles
   enable_zone_redundancy               = var.enable_zone_redundancy
   custom_scripts_storage_account_name  = var.custom_scripts_storage_account_name
+  network_security_perimeter_name      = var.network_security_perimeter_name
 }
