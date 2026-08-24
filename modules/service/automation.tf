@@ -23,6 +23,8 @@ resource "azurerm_automation_account" "scripted_action" {
   )
   depends_on = [
     azurerm_role_assignment.scripted_action_cmk,
+    azurerm_network_security_perimeter_access_rule.subscription,
+    azurerm_network_security_perimeter_association.key_vault,
   ]
 }
 
@@ -52,6 +54,8 @@ resource "azurerm_automation_account" "automation" {
   )
   depends_on = [
     azurerm_role_assignment.automation_cmk,
+    azurerm_network_security_perimeter_access_rule.subscription,
+    azurerm_network_security_perimeter_association.key_vault,
   ]
 }
 

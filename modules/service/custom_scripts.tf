@@ -45,6 +45,7 @@ resource "azurerm_storage_account" "custom_scripts" {
   )
   depends_on = [
     azurerm_role_assignment.custom_scripts_cmk,
+    
   ]
   lifecycle {
     # Ignore changes to encryption settings to avoid recreation of the storage account
