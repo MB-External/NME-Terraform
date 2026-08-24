@@ -171,32 +171,10 @@ variable "sql_server_name" {
   type        = string
 }
 
-variable "sql_server_identity" {
-  description = "SQL Server identity configuration. Defaults to a system-assigned identity. See README for user-assigned identity and create_role_assignment options."
-  type = object({
-    type                              = optional(string, "SystemAssigned")
-    identity_ids                      = optional(list(string), [])
-    primary_user_assigned_identity_id = optional(string)
-    create_role_assignment            = optional(bool, true)
-  })
-  default  = {}
-  nullable = false
-  validation {
-    condition     = var.sql_server_identity.type == "SystemAssigned" || length(var.sql_server_identity.identity_ids) > 0
-    error_message = "identity_ids must be specified if type includes UserAssigned"
-  }
-  validation {
-    condition     = var.sql_server_identity.type == "SystemAssigned" || var.sql_server_identity.primary_user_assigned_identity_id != null
-    error_message = "primary_user_assigned_identity_id must be specified if type includes UserAssigned"
-  }
-  validation {
-    condition     = contains(["SystemAssigned", "SystemAssigned, UserAssigned"], var.sql_server_identity.type)
-    error_message = "type must be either 'SystemAssigned' or 'SystemAssigned, UserAssigned'"
-  }
-  validation {
-    condition     = var.sql_server_identity.type == "SystemAssigned" || contains(var.sql_server_identity.identity_ids, var.sql_server_identity.primary_user_assigned_identity_id)
-    error_message = "primary_user_assigned_identity_id must be one of the identity_ids"
-  }
+variable "sql_server_identity_id" {
+  description = "SQL Server identity to bring your own user-assigned identity. If not specified, a new user-assigned identity will be created and used."
+  type        = string
+  default     = null
 }
 variable "database_name" {
   description = "SQL Database resource name override"

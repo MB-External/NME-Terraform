@@ -92,6 +92,8 @@ The service principal used to run Terraform must have the following **Microsoft 
 
 `Application.ReadWrite.All` is the broad application-management permission assumed by this module for bootstrap and full lifecycle operations. Adding entries to `azuread_app_owners` can still be useful for consumers that later split responsibilities, because follow-on changes to the NME application may then be performed by automation using `Application.ReadWrite.OwnedBy` instead of `Application.ReadWrite.All`. That narrower pattern is environment-specific and left to consumers to implement.
 
+SQL-specific Graph note: SQL uses three least-privileged Microsoft Graph app roles (`User.Read.All`, `Group.Read.All`, and `Application.Read.All`) instead of `Directory.Read.All`. The module applies these three app role assignments only when it creates the SQL user-assigned identity. If you bring your own SQL identity via `sql_server_identity_id`, this module does not create those Graph app role assignments for you; pre-grant the SQL identity all three roles before running `apply`.
+
 
 ### Terraform Providers
 
@@ -131,20 +133,21 @@ The `modules/service` module deploys and configures:
   - App roles (Reviewer, HelpDesk, DesktopAdmin, WvdAdmin, RestClient) and optional user role assignments
   - RBAC role assignments for the NME service principal, with optional opt-out via `assign_subscription_roles`
 - **Database**
-  - Azure SQL Server + database
+  - Azure SQL Server + database, including transparent data encryption with a customer-managed key (CMK)
   - Entra ID admin configuration — defaults to the deploying service principal, or a custom principal via `sql_azuread_administrator`
-  - System-assigned identity by default, or a centrally managed user-assigned identity via `sql_server_identity` (common in Landing Zone environments)
+  - SQL Server uses a user-assigned identity for CMK operations: provide one via `sql_server_identity_id`, or let the module create one
   - SQL firewall rules for Azure services and deployer IP (when private endpoints are disabled)
   - SQL user bootstrap for NME service principal
 - **Secrets and keys**
   - Key Vault (purge protection always enabled)
   - Data protection key
+  - Customer-managed encryption keys for SQL Server, data protection storage, and both Automation Accounts
   - Secrets for SQL connection string, Entra ID client secret, data protection blob path, locks container SAS URL
 - **Storage**
-  - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS)
+  - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK using a user-assigned identity
   - Private containers for data protection keys and locks
 - **Automation**
-  - Two Automation Accounts (updates and scripted actions)
+  - Two Automation Accounts (updates and scripted actions), each encrypted with CMK and configured with a user-assigned identity
   - Imported runbook (`nmwUpdateRunAs`)
 - **Monitoring**
   - Log Analytics Workspace for session host monitoring
@@ -295,15 +298,9 @@ existing_network_config = {
 # to the spoke VNet (e.g. via hub-spoke peering), so deployment_vnet_name /
 # deployment_resource_group_name can be omitted.
 
-# Use a centrally managed user-assigned identity for SQL Server instead of a
-# system-assigned identity. identity_ids and primary_user_assigned_identity_id
-# are ARM resource IDs (not object/principal IDs) - the module looks up the
-# identity's object/principal ID itself when granting Directory.Read.All.
-sql_server_identity = {
-  type                               = "SystemAssigned, UserAssigned"
-  identity_ids                       = ["/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"]
-  primary_user_assigned_identity_id  = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
-}
+# Optional: bring your own user-assigned identity for SQL Server CMK
+# operations. If omitted, the module creates and uses a UAI automatically.
+sql_server_identity_id = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
 
 # Use a break-glass group as the SQL Entra ID admin instead of the deploying
 # service principal
@@ -366,7 +363,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `deployment_resource_group_name` | `string` | `null` | Resource group of the deployment VNet. **Required when `configure_private_endpoints = true`**, unless `existing_network_config` is set and the runner already has connectivity to that VNet |
 | `network_config` | `object` | `null` | Network configuration used to **create** a new VNet and subnets for private endpoints. Required when `configure_private_endpoints = true` and `existing_network_config` is not set. Mutually exclusive with `existing_network_config` |
 | `existing_network_config` | `object` | `null` | Use a **pre-existing** VNet and subnets instead of creating new ones (Azure Landing Zone pattern). Required when `configure_private_endpoints = true` and `network_config` is not set. See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone) |
-| `sql_server_identity` | `object` | `{}` (system-assigned) | SQL Server identity configuration. Set `type = "SystemAssigned, UserAssigned"` plus `identity_ids` / `primary_user_assigned_identity_id` (ARM resource IDs, e.g. `.../userAssignedIdentities/<name>`) to use a centrally managed user-assigned identity. `create_role_assignment` controls whether the module grants `Directory.Read.All` to the identity |
+| `sql_server_identity_id` | `string` | `null` | Optional ARM resource ID of an existing user-assigned identity for SQL Server CMK operations. If not set, the module creates and uses a user-assigned identity. When set, you must pre-grant that identity the Microsoft Graph app roles `User.Read.All`, `Group.Read.All`, and `Application.Read.All` |
 | `sql_azuread_administrator` | `object` | `null` | Custom Entra ID administrator for SQL Server (`login_username`, `object_id`, `tenant_id`). Defaults to the deploying service principal when not set |
 | `private_web_app` | `bool` | `false` | Whether the Web App should be accessible only via private endpoint |
 | `data_protection_key_name` | `string` | `"DataProtection-main"` | Name of the data protection key in Key Vault |
@@ -572,9 +569,11 @@ existing_network_config = {
 
 ### Identity and access in Landing Zone environments
 
-Two additional variables help align the deployment with centrally governed identity patterns commonly enforced in Landing Zones:
+CMK-enabled resources in this module rely on user-assigned identities. For SQL Server, you can bring your own identity by setting `sql_server_identity_id`; otherwise, the module creates one automatically. Data protection storage and both Automation Accounts always use module-created user-assigned identities for CMK operations.
 
-- `sql_server_identity` — use a centrally managed user-assigned identity for the SQL Server instead of (or alongside) its system-assigned identity, and optionally skip the module's `Directory.Read.All` role assignment if that permission is already granted centrally (`create_role_assignment = false`). `identity_ids` and `primary_user_assigned_identity_id` take the identity's ARM resource ID (not its object/principal ID) — the module resolves the object/principal ID itself when creating the role assignment.
+Two additional variables help align the deployment with centrally governed identity and admin patterns commonly enforced in Landing Zones:
+
+- `sql_server_identity_id` — optional ARM resource ID of a centrally managed user-assigned identity to use for SQL Server CMK operations. When set, this module expects the identity's Microsoft Graph app role assignments for `User.Read.All`, `Group.Read.All`, and `Application.Read.All` to already exist.
 - `sql_azuread_administrator` — set the SQL Server's Entra ID administrator to a specific group or principal (e.g. a break-glass admin group) instead of defaulting to the deploying service principal.
 - `azuread_app_owners` — assign additional owners (e.g. a platform team group) to the Entra ID application created for NME. In some environments this supports a reduced-permission operating model where later application changes can use `Application.ReadWrite.OwnedBy` instead of the broader `Application.ReadWrite.All`.
 

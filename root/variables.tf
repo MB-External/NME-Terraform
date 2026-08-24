@@ -152,16 +152,10 @@ variable "sql_server_name" {
   type        = string
 }
 
-variable "sql_server_identity" {
-  description = "SQL Server identity configuration. Defaults to a system-assigned identity. See README for user-assigned identity and create_role_assignment options."
-  type = object({
-    type                              = optional(string, "SystemAssigned")
-    identity_ids                      = optional(list(string), [])
-    primary_user_assigned_identity_id = optional(string)
-    create_role_assignment            = optional(bool, true)
-  })
-  default  = {}
-  nullable = false
+variable "sql_server_identity_id" {
+  description = "SQL Server identity to bring your own user-assigned identity. If not specified, a new user-assigned identity will be created and used."
+  type        = string
+  default     = null
 }
 
 variable "sql_azuread_administrator" {

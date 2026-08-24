@@ -5,6 +5,13 @@ resource "azurerm_automation_account" "scripted_action" {
   public_network_access_enabled = false
 
   sku_name = "Basic"
+  identity {
+    type = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.scripted_action.id]
+  }
+  encryption {
+    key_vault_key_id = azurerm_key_vault_key.scripted_action_cmk.id
+  }
 
   tags = merge(var.tags,
     lookup(
@@ -24,7 +31,11 @@ resource "azurerm_automation_account" "automation" {
   sku_name = "Basic"
 
   identity {
-    type = "SystemAssigned"
+    type = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.automation.id]
+  }
+  encryption {
+    key_vault_key_id = azurerm_key_vault_key.automation_cmk.id
   }
 
   tags = merge(var.tags,
@@ -154,4 +165,94 @@ resource "azurerm_private_endpoint" "automation_unmanaged_dns" {
   lifecycle {
     ignore_changes = [private_dns_zone_group]
   }
+}
+
+resource "azurerm_role_assignment" "automation_cmk" {
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  scope                = azurerm_key_vault_key.automation_cmk.id
+  principal_id         = azurerm_user_assigned_identity.automation.principal_id
+}
+
+resource "azurerm_user_assigned_identity" "automation" {
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  name                = "${var.automation_account_name}-uai"
+}
+resource "time_offset" "automation_encryption" {
+  offset_months = 18
+}
+
+resource "azurerm_key_vault_key" "automation_cmk" {
+  name         = "${var.automation_account_name}-cmk"
+  key_vault_id = azurerm_key_vault.key_vault.id
+  key_type     = "RSA"
+  key_size     = 2048
+
+  key_opts = [
+    "unwrapKey",
+    "wrapKey",
+  ]
+
+  rotation_policy {
+    automatic {
+      time_after_creation = "P12M"
+    }
+    expire_after         = "P18M"
+    notify_before_expiry = "P1M"
+  }
+  expiration_date = time_offset.automation_encryption.rfc3339
+  lifecycle {
+    ignore_changes = [
+      expiration_date
+    ]
+  }
+  depends_on = [
+    azurerm_role_assignment.key_vault_deployer_crypto_officer,
+    null_resource.wait_for_key_vault_private_dns,
+  ]
+}
+
+resource "azurerm_role_assignment" "scripted_action_cmk" {
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  scope                = azurerm_key_vault_key.scripted_action_cmk.id
+  principal_id         = azurerm_user_assigned_identity.scripted_action.principal_id
+}
+
+resource "azurerm_user_assigned_identity" "scripted_action" {
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  name                = "${var.scripted_action_account_name}-uai"
+}
+resource "time_offset" "scripted_action_encryption" {
+  offset_months = 18
+}
+
+resource "azurerm_key_vault_key" "scripted_action_cmk" {
+  name         = "${var.scripted_action_account_name}-cmk"
+  key_vault_id = azurerm_key_vault.key_vault.id
+  key_type     = "RSA"
+  key_size     = 2048
+
+  key_opts = [
+    "unwrapKey",
+    "wrapKey",
+  ]
+
+  rotation_policy {
+    automatic {
+      time_after_creation = "P12M"
+    }
+    expire_after         = "P18M"
+    notify_before_expiry = "P1M"
+  }
+  expiration_date = time_offset.scripted_action_encryption.rfc3339
+  lifecycle {
+    ignore_changes = [
+      expiration_date
+    ]
+  }
+  depends_on = [
+    azurerm_role_assignment.key_vault_deployer_crypto_officer,
+    null_resource.wait_for_key_vault_private_dns,
+  ]
 }

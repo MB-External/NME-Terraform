@@ -1,6 +1,6 @@
 locals {
   private_endpoint_dns_delay_seconds = local.manage_dns ? 30 : 10
-  private_endpoint_dns_max_attempts   = 60
+  private_endpoint_dns_max_attempts  = 60
 }
 
 resource "null_resource" "wait_for_key_vault_private_dns" {

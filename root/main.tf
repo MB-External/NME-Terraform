@@ -69,7 +69,7 @@ module "service" {
   read_write_deployment_principal_ids  = var.read_write_deployment_principal_ids
   existing_network_config              = var.existing_network_config
   tags                                 = var.tags
-  sql_server_identity                  = var.sql_server_identity
+  sql_server_identity_id               = var.sql_server_identity_id
   azuread_app_owners                   = var.azuread_app_owners
   sql_azuread_administrator            = var.sql_azuread_administrator
   assign_subscription_roles            = var.assign_subscription_roles

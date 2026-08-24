@@ -53,17 +53,15 @@ sql_collation   = "SQL_Latin1_General_CP1_CI_AS"
 database_max_size_gb = 250
 database_sku_name = "S1"
 
-# Optional: use a centrally managed user-assigned identity instead of a
-# system-assigned identity for the SQL Server (common in Landing Zones)
-# In real roots, prefer passing these IDs from data sources, remote state,
+# Optional: bring your own user-assigned identity for SQL Server CMK
+# operations. If omitted, the module creates and uses a UAI automatically.
+# When set, pre-grant that identity the Microsoft Graph User.Read.All,
+# Group.Read.All, and Application.Read.All app role assignments before
+# running terraform apply.
+# In real roots, prefer passing this value from data sources, remote state,
 # or other module outputs rather than maintaining duplicated literal values
-# in tfvars. This module accepts plain values; that wiring is left to
-# consumers to implement.
-# sql_server_identity = {
-#   type                               = "SystemAssigned, UserAssigned"
-#   identity_ids                       = ["/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"]
-#   primary_user_assigned_identity_id  = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
-# }
+# in tfvars.
+# sql_server_identity_id = "/subscriptions/.../resourceGroups/rg-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-nme-sql"
 
 # Optional: use a specific Entra ID principal (e.g. a break-glass admin group)
 # as the SQL Server administrator instead of the deploying service principal

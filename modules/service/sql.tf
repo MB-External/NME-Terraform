@@ -18,22 +18,38 @@ removed {
   }
 }
 
-data "azurerm_user_assigned_identity" "sql_server_primary" {
-  count               = var.sql_server_identity.primary_user_assigned_identity_id == null ? 0 : 1
-  name                = provider::azurerm::parse_resource_id(var.sql_server_identity.primary_user_assigned_identity_id)["resource_name"]
-  resource_group_name = provider::azurerm::parse_resource_id(var.sql_server_identity.primary_user_assigned_identity_id)["resource_group_name"]
+resource "azurerm_user_assigned_identity" "sql_server" {
+  count               = var.sql_server_identity_id == null ? 1 : 0
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  name                = "${var.sql_server_name}-uai"
 }
 
-# Grant Directory.Read.All to SQL Server's Managed Identity
-resource "azuread_app_role_assignment" "sql_directory_read_all" {
-  count               = var.sql_server_identity.create_role_assignment ? 1 : 0
-  app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
-  principal_object_id = var.sql_server_identity.primary_user_assigned_identity_id == null ? azurerm_mssql_server.sql_server.identity[0].principal_id : data.azurerm_user_assigned_identity.sql_server_primary[0].principal_id
+data "azurerm_user_assigned_identity" "sql_server_primary" {
+  count               = var.sql_server_identity_id == null ? 0 : 1
+  name                = provider::azurerm::parse_resource_id(var.sql_server_identity_id)["resource_name"]
+  resource_group_name = provider::azurerm::parse_resource_id(var.sql_server_identity_id)["resource_group_name"]
+}
+
+# Grant required Entra roles to SQL Server's Managed Identity
+# https://learn.microsoft.com/azure/azure-sql/database/authentication-azure-ad-user-assigned-managed-identity?view=azuresql#permissions
+resource "azuread_app_role_assignment" "sql_user_read_all" {
+  count               = var.sql_server_identity_id == null ? 1 : 0
+  app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["User.Read.All"]
+  principal_object_id = azurerm_mssql_server.sql_server.identity[0].principal_id
   resource_object_id  = data.azuread_service_principal.msgraph.object_id
 }
-moved {
-  from = azuread_app_role_assignment.sql_directory_read_all
-  to   = azuread_app_role_assignment.sql_directory_read_all[0]
+resource "azuread_app_role_assignment" "sql_group_read_all" {
+  count               = var.sql_server_identity_id == null ? 1 : 0
+  app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Group.Read.All"]
+  principal_object_id = azurerm_mssql_server.sql_server.identity[0].principal_id
+  resource_object_id  = data.azuread_service_principal.msgraph.object_id
+}
+resource "azuread_app_role_assignment" "sql_application_read_all" {
+  count               = var.sql_server_identity_id == null ? 1 : 0
+  app_role_id         = data.azuread_service_principal.msgraph.app_role_ids["Application.Read.All"]
+  principal_object_id = azurerm_mssql_server.sql_server.identity[0].principal_id
+  resource_object_id  = data.azuread_service_principal.msgraph.object_id
 }
 
 resource "azurerm_mssql_server" "sql_server" {
@@ -52,10 +68,11 @@ resource "azurerm_mssql_server" "sql_server" {
   }
 
   identity {
-    type         = var.sql_server_identity.type
-    identity_ids = var.sql_server_identity.identity_ids == [] ? null : var.sql_server_identity.identity_ids
+    type         = "SystemAssigned, UserAssigned"
+    identity_ids = var.sql_server_identity_id == null ? [azurerm_user_assigned_identity.sql_server[0].id] : [var.sql_server_identity_id]
   }
-  primary_user_assigned_identity_id = var.sql_server_identity.primary_user_assigned_identity_id
+  primary_user_assigned_identity_id            = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].id : var.sql_server_identity_id
+  transparent_data_encryption_key_vault_key_id = azurerm_key_vault_key.sql_server_cmk.id
 
   tags = merge(var.tags,
     {
@@ -67,6 +84,9 @@ resource "azurerm_mssql_server" "sql_server" {
       {}
     )
   )
+  depends_on = [
+    azurerm_role_assignment.sql_server_cmk,
+  ]
 }
 
 resource "azurerm_mssql_database" "database" {
@@ -260,7 +280,48 @@ resource "null_resource" "sql_user_setup" {
     azurerm_mssql_database.database,
     azurerm_mssql_firewall_rule.allow_azure_ips,
     azurerm_mssql_firewall_rule.allow_deployer_ip,
-    azuread_app_role_assignment.sql_directory_read_all,
+    azuread_app_role_assignment.sql_user_read_all,
+    azuread_app_role_assignment.sql_group_read_all,
+    azuread_app_role_assignment.sql_application_read_all,
     null_resource.wait_for_sql_private_dns,
+  ]
+}
+
+resource "azurerm_role_assignment" "sql_server_cmk" {
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  scope                = azurerm_key_vault_key.sql_server_cmk.id
+  principal_id         = var.sql_server_identity_id == null ? azurerm_user_assigned_identity.sql_server[0].principal_id : data.azurerm_user_assigned_identity.sql_server_primary[0].principal_id
+}
+resource "time_offset" "sql_server_encryption" {
+  offset_months = 18
+}
+
+resource "azurerm_key_vault_key" "sql_server_cmk" {
+  name         = "${var.sql_server_name}-cmk"
+  key_vault_id = azurerm_key_vault.key_vault.id
+  key_type     = "RSA"
+  key_size     = 2048
+
+  key_opts = [
+    "unwrapKey",
+    "wrapKey",
+  ]
+
+  rotation_policy {
+    automatic {
+      time_after_creation = "P12M"
+    }
+    expire_after         = "P18M"
+    notify_before_expiry = "P1M"
+  }
+  expiration_date = time_offset.sql_server_encryption.rfc3339
+  lifecycle {
+    ignore_changes = [
+      expiration_date
+    ]
+  }
+  depends_on = [
+    azurerm_role_assignment.key_vault_deployer_crypto_officer,
+    null_resource.wait_for_key_vault_private_dns,
   ]
 }
