@@ -6,7 +6,7 @@ resource "azurerm_automation_account" "scripted_action" {
 
   sku_name = "Basic"
   identity {
-    type = "UserAssigned"
+    type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.scripted_action.id]
   }
   encryption {
@@ -31,7 +31,7 @@ resource "azurerm_automation_account" "automation" {
   sku_name = "Basic"
 
   identity {
-    type = "UserAssigned"
+    type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.automation.id]
   }
   encryption {

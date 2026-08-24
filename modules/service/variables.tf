@@ -351,3 +351,8 @@ variable "enable_zone_redundancy" {
     error_message = "database_sku_name must be a SKU that supports zone redundancy when enable_zone_redundancy is true. See https://learn.microsoft.com/azure/reliability/reliability-sql-database"
   }
 }
+
+variable "custom_scripts_storage_account_name" {
+  description = "Storage Account for Custom Scripts"
+  type        = string
+}

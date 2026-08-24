@@ -304,3 +304,8 @@ variable "enable_zone_redundancy" {
   default     = false
   nullable    = false
 }
+
+variable "custom_scripts_storage_account_name" {
+  description = "Storage Account for Custom Scripts"
+  type        = string
+}

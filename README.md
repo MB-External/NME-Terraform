@@ -145,6 +145,7 @@ The `modules/service` module deploys and configures:
   - Secrets for SQL connection string, Entra ID client secret, data protection blob path, locks container SAS URL
 - **Storage**
   - Data protection storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK using a user-assigned identity
+  - Custom scripts storage account (ZRS in unpaired regions; GZRS in paired regions when `enable_zone_redundancy = true`; otherwise GRS), encrypted with CMK using a user-assigned identity
   - Private containers for data protection keys and locks
 - **Automation**
   - Two Automation Accounts (updates and scripted actions), each encrypted with CMK and configured with a user-assigned identity
@@ -158,7 +159,7 @@ The `modules/service` module deploys and configures:
   - A dedicated VNet + subnets for private endpoints and app integration created by the module, **or** an existing VNet and subnets (`existing_network_config`) for Azure Landing Zone deployments
   - VNet peering to a deployment VNet (optional — not needed when the deployment machine already has network line of sight to the existing VNet, e.g. via hub-spoke peering)
   - Private DNS zones + VNet links managed by the module, or left unmanaged (`manage_dns = false`) when a central platform (e.g. Azure Policy) manages private DNS zone groups
-  - Private endpoints for Web App, SQL, Key Vault, Storage (blob), Automation
+  - Private endpoints for Web App, SQL, Key Vault, Data Protection Storage (blob), Custom Scripts Storage (blob), Automation
 - **Protection (optional)**
   - Management locks for Key Vault, SQL database, and data protection storage account
 - **Tagging**
@@ -205,6 +206,7 @@ database_max_size_gb = 250
 
 key_vault_name                         = "nme-kv-prod"
 data_protection_storage_account_name   = "nmepdprod001"
+custom_scripts_storage_account_name    = "nmecscripts001"
 data_protection_keys_blob_name         = "keys-prod.xml"
 data_protection_key_name               = "DataProtection-prod"
 
@@ -346,6 +348,7 @@ See [Deploying into an Azure Landing Zone](#deploying-into-an-azure-landing-zone
 | `logs_law_name` | `string` | Name for the Log Analytics Workspace (Application Insights) |
 | `scripted_action_account_name` | `string` | Name for the Automation Account (scripted actions) |
 | `data_protection_storage_account_name` | `string` | Name for the Storage Account (data protection keys) |
+| `custom_scripts_storage_account_name` | `string` | Name for the Storage Account used by custom script actions |
 | `data_protection_keys_blob_name` | `string` | Name of the blob file where data protection keys are stored |
 
 ### Optional
@@ -441,13 +444,14 @@ When `configure_private_endpoints = true`, every NME service is placed behind an
 
 ### What gets created
 
-The module provisions a dedicated VNet with two subnets and creates private endpoints for five services:
+The module provisions a dedicated VNet with two subnets and creates private endpoints for six services:
 
 | Service | Private Endpoint sub-resource | Private DNS zone (AzureCloud) |
 |---------|-------------------------------|-------------------------------|
 | SQL Server | `sqlServer` | `privatelink.database.windows.net` |
 | Key Vault | `vault` | `privatelink.vaultcore.azure.net` |
-| Storage Account (blob) | `blob` | `privatelink.blob.core.windows.net` |
+| Data Protection Storage Account (blob) | `blob` | `privatelink.blob.core.windows.net` |
+| Custom Scripts Storage Account (blob) | `blob` | `privatelink.blob.core.windows.net` |
 | Web App | `sites` | `privatelink.azurewebsites.net` |
 | Automation Account | `Webhook` | `privatelink.azure-automation.net` |
 
@@ -695,6 +699,7 @@ Note that this is not a fully air-gapped install: the deployment still requires 
 - When `existing_network_config.manage_dns = false`, this module does not create, link, or write to any private DNS zone for the private endpoints — it is expected that a central process (typically an Azure Policy assignment) manages private DNS zone groups for the endpoints. The module still creates the private endpoints themselves and ignores changes to `private_dns_zone_group` on them.
 - Key Vault `purge_protection_enabled` is always `true` and cannot be disabled. Soft-deleted Key Vaults cannot be permanently purged before the retention period (90 days) expires; plan resource naming accordingly if you expect to redeploy under the same name.
 - `read_only_deployment_principal_ids` and `read_write_deployment_principal_ids` currently control **Key Vault data-plane RBAC** created by this module. Read-only principals receive `Key Vault Reader`. Read-write principals receive `Key Vault Crypto Officer`, `Key Vault Secrets Officer`, and `Key Vault Certificates Officer` so they can create and update the data protection key, secrets, and certificate material needed during deployment.
+- `custom_scripts_storage_account_name` is required and must be globally unique, 3-24 characters, and lower-case alphanumeric. For naming guidance specific to custom script actions
 - A common best-practice pattern is to run `terraform plan` with a dedicated lower-privilege identity included in `read_only_deployment_principal_ids`, and run `terraform apply` with a separate higher-privilege identity included in `read_write_deployment_principal_ids`. If `read_write_deployment_principal_ids` is left empty, the module falls back to the current caller's object ID.
 - The Microsoft Graph and ARM/Service Management API service principals are referenced via data sources rather than managed resources, so `terraform destroy` will never attempt to delete these shared, tenant-wide service principals.
 - On clean deployments with `configure_private_endpoints = true`, Azure may return **403 `ForbiddenByConnection`** errors when writing Key Vault secrets or keys. This happens because of race condition between private endpoint creation and DNS propagation. Two mitigation options:

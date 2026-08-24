@@ -84,11 +84,12 @@ locals {
   private_endpoints_subnet_id = var.configure_private_endpoints ? (var.network_config != null ? azurerm_subnet.private_endpoints[0].id : data.azurerm_subnet.private_endpoints[0].id) : null
   app_subnet_id               = var.configure_private_endpoints ? (var.network_config != null ? azurerm_subnet.app[0].id : data.azurerm_subnet.app[0].id) : null
 
-  private_endpoint_app_service_id = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.web_app[0].id : azurerm_private_endpoint.web_app_unmanaged_dns[0].id : null
-  private_endpoint_automation_id  = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.automation[0].id : azurerm_private_endpoint.automation_unmanaged_dns[0].id : null
-  private_endpoint_sql_server_id  = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.sql_server[0].id : azurerm_private_endpoint.sql_server_unmanaged_dns[0].id : null
-  private_endpoint_blob_id        = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.storage_blob[0].id : azurerm_private_endpoint.storage_blob_unmanged_dns[0].id : null
-  private_endpoint_key_vault_id   = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.key_vault[0].id : azurerm_private_endpoint.key_vault_unmanaged_dns[0].id : null
+  private_endpoint_app_service_id          = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.web_app[0].id : azurerm_private_endpoint.web_app_unmanaged_dns[0].id : null
+  private_endpoint_automation_id           = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.automation[0].id : azurerm_private_endpoint.automation_unmanaged_dns[0].id : null
+  private_endpoint_sql_server_id           = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.sql_server[0].id : azurerm_private_endpoint.sql_server_unmanaged_dns[0].id : null
+  private_endpoint_data_protection_blob_id = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.data_protection_storage_blob[0].id : azurerm_private_endpoint.data_protection_storage_blob_unmanaged_dns[0].id : null
+  private_endpoint_custom_scripts_blob_id  = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.custom_scripts_storage_blob[0].id : azurerm_private_endpoint.custom_scripts_storage_blob_unmanaged_dns[0].id : null
+  private_endpoint_key_vault_id            = var.configure_private_endpoints ? local.manage_dns ? azurerm_private_endpoint.key_vault[0].id : azurerm_private_endpoint.key_vault_unmanaged_dns[0].id : null
 
   arm_api_app_id = {
     AzureCloud        = "797f4846-ba00-4fd7-ba43-dac1f8f63013"
@@ -98,4 +99,22 @@ locals {
 
   read_only_deployment_principal_ids  = var.read_only_deployment_principal_ids
   read_write_deployment_principal_ids = length(var.read_write_deployment_principal_ids) > 0 ? var.read_write_deployment_principal_ids : [data.azurerm_client_config.current.object_id]
+
+  # From Bicep: contains(unpairedRegions, toLower(location)) ? 'Standard_ZRS' : 'Standard_GRS'
+  unpaired_regions = toset([
+    "austriaeast",
+    "belgiumcentral",
+    "chilecentral",
+    "indonesiacentral",
+    "israelcentral",
+    "italynorth",
+    "malaysiawest",
+    "mexicocentral",
+    "newzealandnorth",
+    "polandcentral",
+    "qatarcentral",
+    "spaincentral",
+  ])
+
+  storage_replication_type = contains(local.unpaired_regions, lower(var.location)) ? "ZRS" : var.enable_zone_redundancy ? "GZRS" : "GRS"
 }

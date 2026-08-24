@@ -74,4 +74,5 @@ module "service" {
   sql_azuread_administrator            = var.sql_azuread_administrator
   assign_subscription_roles            = var.assign_subscription_roles
   enable_zone_redundancy               = var.enable_zone_redundancy
+  custom_scripts_storage_account_name  = var.custom_scripts_storage_account_name
 }

@@ -1,24 +1,6 @@
 locals {
   data_protection_storage_blob_container = "dataprotectionkeys"
   blob_lease_container                   = "locks"
-
-  # From Bicep: contains(unpairedRegions, toLower(location)) ? 'Standard_ZRS' : 'Standard_GRS'
-  unpaired_regions = toset([
-    "austriaeast",
-    "belgiumcentral",
-    "chilecentral",
-    "indonesiacentral",
-    "israelcentral",
-    "italynorth",
-    "malaysiawest",
-    "mexicocentral",
-    "newzealandnorth",
-    "polandcentral",
-    "qatarcentral",
-    "spaincentral",
-  ])
-
-  storage_replication_type = contains(local.unpaired_regions, lower(var.location)) ? "ZRS" : var.enable_zone_redundancy ? "GZRS" : "GRS"
 }
 
 # SAS tokens (Terraform equivalent of listServiceSas)
@@ -174,8 +156,11 @@ resource "azurerm_private_dns_zone_virtual_network_link" "data_protection_deploy
   tags                 = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/privateDnsZones/virtualNetworkLinks", {}))
   registration_enabled = false
 }
-
-resource "azurerm_private_endpoint" "storage_blob" {
+moved {
+  from = azurerm_private_endpoint.storage_blob
+  to   = azurerm_private_endpoint.data_protection_storage_blob
+}
+resource "azurerm_private_endpoint" "data_protection_storage_blob" {
   count               = local.deploy_private_endpoint_managed_dns ? 1 : 0
   name                = "${azurerm_storage_account.data_protection.name}-blob-pe"
   location            = var.location
@@ -195,8 +180,11 @@ resource "azurerm_private_endpoint" "storage_blob" {
     private_dns_zone_ids = [local.blob_private_dns_zone_id]
   }
 }
-
-resource "azurerm_private_endpoint" "storage_blob_unmanged_dns" {
+moved {
+  from = azurerm_private_endpoint.storage_blob_unmanged_dns
+  to   = azurerm_private_endpoint.data_protection_storage_blob_unmanaged_dns
+}
+resource "azurerm_private_endpoint" "data_protection_storage_blob_unmanaged_dns" {
   count               = local.deploy_private_endpoint_unmanaged_dns ? 1 : 0
   name                = "${azurerm_storage_account.data_protection.name}-blob-pe"
   location            = var.location
