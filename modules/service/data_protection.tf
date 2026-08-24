@@ -94,8 +94,8 @@ resource "azurerm_storage_account" "data_protection" {
   public_network_access_enabled = var.configure_private_endpoints ? false : true
 
   infrastructure_encryption_enabled = true
-  queue_encryption_key_type         = "Service"
-  table_encryption_key_type         = "Service"
+  queue_encryption_key_type         = "Account"
+  table_encryption_key_type         = "Account"
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.data_protection.id]
