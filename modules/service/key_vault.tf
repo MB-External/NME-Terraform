@@ -203,4 +203,7 @@ resource "azurerm_network_security_perimeter_association" "key_vault" {
 
   network_security_perimeter_profile_id = azurerm_network_security_perimeter_profile.default.id
   resource_id                           = azurerm_key_vault.key_vault.id
+  depends_on = [ 
+    azurerm_network_security_perimeter_access_rule.subscription,
+   ]
 }

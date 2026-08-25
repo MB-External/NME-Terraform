@@ -45,7 +45,6 @@ resource "azurerm_storage_account" "custom_scripts" {
   )
   depends_on = [
     azurerm_role_assignment.custom_scripts_cmk,
-    azurerm_network_security_perimeter_access_rule.subscription,
     azurerm_network_security_perimeter_association.key_vault,
   ]
   lifecycle {
