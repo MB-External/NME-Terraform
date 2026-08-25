@@ -86,7 +86,7 @@ resource "azurerm_mssql_server" "sql_server" {
   )
   depends_on = [
     azurerm_role_assignment.sql_server_cmk,
-    azurerm_network_security_perimeter_association.key_vault,
+    time_sleep.wait_key_vault_nsp_association,
   ]
 }
 

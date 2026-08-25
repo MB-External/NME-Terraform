@@ -99,8 +99,8 @@ resource "azurerm_network_security_perimeter_profile" "default" {
 }
 
 resource "azurerm_network_security_perimeter_access_rule" "subscription" {
-  name                          = "subscription"
+  name                                  = "subscription"
   network_security_perimeter_profile_id = azurerm_network_security_perimeter_profile.default.id
-  direction                    = "Inbound"
-  subscription_ids              = ["/subscriptions/${data.azurerm_client_config.current.subscription_id}"]
+  direction                             = "Inbound"
+  subscription_ids                      = ["/subscriptions/${data.azurerm_client_config.current.subscription_id}"]
 }

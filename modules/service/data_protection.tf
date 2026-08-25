@@ -119,7 +119,7 @@ resource "azurerm_storage_account" "data_protection" {
   )
   depends_on = [
     azurerm_role_assignment.data_protection_cmk,
-    azurerm_network_security_perimeter_association.key_vault,
+    time_sleep.wait_key_vault_nsp_association,
   ]
   lifecycle {
     # Ignore changes to encryption settings to avoid recreation of the storage account

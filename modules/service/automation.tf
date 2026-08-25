@@ -10,7 +10,7 @@ resource "azurerm_automation_account" "scripted_action" {
     identity_ids = [azurerm_user_assigned_identity.scripted_action.id]
   }
   encryption {
-    key_vault_key_id          = azurerm_key_vault_key.scripted_action_cmk.versionless_id
+    key_vault_key_id          = azurerm_key_vault_key.scripted_action_cmk.id
     user_assigned_identity_id = azurerm_user_assigned_identity.scripted_action.id
   }
 
@@ -23,7 +23,7 @@ resource "azurerm_automation_account" "scripted_action" {
   )
   depends_on = [
     azurerm_role_assignment.scripted_action_cmk,
-    azurerm_network_security_perimeter_association.key_vault,
+    time_sleep.wait_key_vault_nsp_association,
   ]
 }
 
@@ -40,7 +40,7 @@ resource "azurerm_automation_account" "automation" {
     identity_ids = [azurerm_user_assigned_identity.automation.id]
   }
   encryption {
-    key_vault_key_id          = azurerm_key_vault_key.automation_cmk.versionless_id
+    key_vault_key_id          = azurerm_key_vault_key.automation_cmk.id
     user_assigned_identity_id = azurerm_user_assigned_identity.automation.id
   }
 
@@ -53,7 +53,7 @@ resource "azurerm_automation_account" "automation" {
   )
   depends_on = [
     azurerm_role_assignment.automation_cmk,
-    azurerm_network_security_perimeter_association.key_vault,
+    time_sleep.wait_key_vault_nsp_association,
   ]
 }
 
