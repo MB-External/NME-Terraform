@@ -209,7 +209,7 @@ resource "azurerm_network_security_perimeter_association" "key_vault" {
 }
 
 resource "time_sleep" "wait_key_vault_nsp_association" {
-  create_duration = "60s"
+  create_duration = "15s"
   triggers = {
     key_vault_nsp_association_id    = azurerm_network_security_perimeter_association.key_vault.id
     subscription_nsp_access_rule_id = azurerm_network_security_perimeter_access_rule.subscription.id
