@@ -25,16 +25,7 @@ if ($azureEnv -eq "AzureUSGovernment") {
 }
 
 function Get-AuthHeader {
-    if (-not (Get-Command Get-AzAccessToken).Parameters.AsSecureString) {
-        return 'Bearer {0}' -f (Get-AzAccessToken).Token
-    }
-
-    $tokenPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR((Get-AzAccessToken -AsSecureString).Token)
-    try {
-        return 'Bearer {0}' -f [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($tokenPtr)
-    } finally {
-        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenPtr)
-    }
+    return 'Bearer {0}' -f (az account get-access-token --query accessToken -o tsv)
 }
 
 function Get-AuthInfo {
