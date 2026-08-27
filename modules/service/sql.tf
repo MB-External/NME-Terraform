@@ -235,13 +235,8 @@ resource "null_resource" "sql_user_setup" {
       # Authenticate to Azure using ARM env vars
       . '${path.module}/scripts/connect-azure.ps1' -Environment '${var.azure_environment}' -SubscriptionId '${data.azurerm_client_config.current.subscription_id}'
 
-      # Get token for database scope
-      if (-not (Get-Command Get-AzAccessToken).Parameters.AsSecureString) {
-          $sqlToken = (Get-AzAccessToken -ResourceUrl '${local.database_scope}').Token
-      } else {
-          $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR((Get-AzAccessToken -AsSecureString -ResourceUrl '${local.database_scope}').Token)
-          try { $sqlToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) } finally { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
-      }
+      # Get token for database scope, az cli is used as it will handle an expired access token and refresh it automatically which is not the case for the Azure PowerShell module
+      $sqlToken = az account get-access-token --resource '${local.database_scope}' --query accessToken -o tsv
 
       $query = @"
       IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$spName')
