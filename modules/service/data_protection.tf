@@ -139,9 +139,11 @@ resource "terraform_data" "dp_primary_connection_string" {
   # account connection string, therefore isn't able to read the connection string after 
   # the storage account is created
   # https://github.com/Azure/azure-rest-api-specs/issues/6363
-  input = azurerm_storage_account.data_protection.primary_connection_string
-  sensitive = true
-  version = "1"
+  store {
+    input     = azurerm_storage_account.data_protection.primary_connection_string
+    sensitive = true
+    version   = "1"
+  }
 }
 
 resource "azurerm_storage_container" "dp_keys" {
