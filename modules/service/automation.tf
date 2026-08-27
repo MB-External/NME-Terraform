@@ -233,6 +233,7 @@ resource "azurerm_user_assigned_identity" "scripted_action" {
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = "${var.scripted_action_account_name}-uai"
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.ManagedIdentity/userAssignedIdentities", {}))
 }
 resource "time_offset" "scripted_action_encryption" {
   offset_months = 18
