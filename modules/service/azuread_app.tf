@@ -23,7 +23,7 @@ locals {
   ])
 
   constrained_user_access_administrator_role_names = [
-    "Virtual Machine User Login"
+    "Desktop Virtualization User"
   ]
 
   role_assignments_map = { for ra in local.flat_role_assignments : ra.key => ra }
