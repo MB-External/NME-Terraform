@@ -29,7 +29,7 @@ resource "azurerm_storage_account" "custom_scripts" {
   }
 
   dynamic "network_rules" {
-    for_each = var.configure_private_endpoints ? [1] : []
+    for_each = var.configure_private_endpoints ? [0] : [1]
     content {
       default_action = "Allow"
       bypass         = ["AzureServices"]
