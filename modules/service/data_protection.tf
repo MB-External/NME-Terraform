@@ -6,7 +6,7 @@ locals {
 # SAS tokens (Terraform equivalent of listServiceSas)
 # We generate an *account SAS* limited to the blob service + container/object resource types and rcw permissions.
 data "azurerm_storage_account_sas" "dp_keys_sas" {
-  connection_string = azurerm_storage_account.data_protection.primary_connection_string
+  connection_string = terraform_data.dp_primary_connection_string.output
 
   https_only = true
 
@@ -41,7 +41,7 @@ data "azurerm_storage_account_sas" "dp_keys_sas" {
 }
 
 data "azurerm_storage_account_sas" "dp_locks_sas" {
-  connection_string = azurerm_storage_account.data_protection.primary_connection_string
+  connection_string = terraform_data.dp_primary_connection_string.output
 
   https_only = true
 
@@ -132,6 +132,16 @@ resource "azurerm_storage_account" "data_protection" {
       infrastructure_encryption_enabled,
     ]
   }
+}
+
+resource "terraform_data" "dp_primary_connection_string" {
+  # Workaround for when the account running plan doesn't have write access to the storage 
+  # account connection string, therefore isn't able to read the connection string after 
+  # the storage account is created
+  # https://github.com/Azure/azure-rest-api-specs/issues/6363
+  input = azurerm_storage_account.data_protection.primary_connection_string
+  sensitive = true
+  version = "1"
 }
 
 resource "azurerm_storage_container" "dp_keys" {
