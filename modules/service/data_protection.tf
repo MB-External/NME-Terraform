@@ -106,7 +106,7 @@ resource "azurerm_storage_account" "data_protection" {
   }
 
   dynamic "network_rules" {
-    for_each = var.configure_private_endpoints ? [0] : [1]
+    for_each = var.configure_private_endpoints ? [] : [1]
     content {
       default_action = "Allow"
       bypass         = ["AzureServices"]
@@ -228,6 +228,7 @@ resource "azurerm_user_assigned_identity" "data_protection" {
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = "${var.data_protection_storage_account_name}-uai"
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.ManagedIdentity/userAssignedIdentities", {}))
 }
 resource "time_offset" "storage_account_encryption" {
   offset_months = 18

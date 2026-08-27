@@ -91,6 +91,7 @@ resource "azurerm_network_security_perimeter" "this" {
   name                = var.network_security_perimeter_name
   resource_group_name = var.resource_group_name
   location            = var.location
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.Network/networkSecurityPerimeters", {}))
 }
 
 resource "azurerm_network_security_perimeter_profile" "default" {

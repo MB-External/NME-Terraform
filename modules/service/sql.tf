@@ -23,6 +23,7 @@ resource "azurerm_user_assigned_identity" "sql_server" {
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = "${var.sql_server_name}-uai"
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.ManagedIdentity/userAssignedIdentities", {}))
 }
 
 data "azurerm_user_assigned_identity" "sql_server_primary" {

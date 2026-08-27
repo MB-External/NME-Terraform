@@ -187,6 +187,7 @@ resource "azurerm_user_assigned_identity" "automation" {
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = "${var.automation_account_name}-uai"
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.ManagedIdentity/userAssignedIdentities", {}))
 }
 resource "time_offset" "automation_encryption" {
   offset_months = 18

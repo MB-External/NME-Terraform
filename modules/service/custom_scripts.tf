@@ -29,7 +29,7 @@ resource "azurerm_storage_account" "custom_scripts" {
   }
 
   dynamic "network_rules" {
-    for_each = var.configure_private_endpoints ? [0] : [1]
+    for_each = var.configure_private_endpoints ? [] : [1]
     content {
       default_action = "Allow"
       bypass         = ["AzureServices"]
@@ -111,6 +111,7 @@ resource "azurerm_user_assigned_identity" "custom_scripts" {
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = "${var.custom_scripts_storage_account_name}-uai"
+  tags                = merge(var.tags, lookup(var.tags_by_resource, "Microsoft.ManagedIdentity/userAssignedIdentities", {}))
 }
 resource "time_offset" "custom_scripts_cmk" {
   offset_months = 18
