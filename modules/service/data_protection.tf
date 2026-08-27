@@ -105,9 +105,12 @@ resource "azurerm_storage_account" "data_protection" {
     key_vault_key_id          = azurerm_key_vault_key.data_protection_cmk.versionless_id
   }
 
-  network_rules {
-    default_action = "Allow"
-    bypass         = ["AzureServices"]
+  dynamic "network_rules" {
+    for_each = var.configure_private_endpoints ? [1] : []
+    content {
+      default_action = "Allow"
+      bypass         = ["AzureServices"]
+    }
   }
 
   tags = merge(var.tags,
