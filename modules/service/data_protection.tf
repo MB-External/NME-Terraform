@@ -6,7 +6,7 @@ locals {
 # SAS tokens (Terraform equivalent of listServiceSas)
 # We generate an *account SAS* limited to the blob service + container/object resource types and rcw permissions.
 data "azurerm_storage_account_sas" "dp_keys_sas" {
-  connection_string = terraform_data.dp_primary_connection_string.output
+  connection_string = terraform_data.dp_primary_connection_string.store.sensitive_output
 
   https_only = true
 
