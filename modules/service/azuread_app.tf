@@ -393,27 +393,20 @@ resource "azurerm_role_assignment" "nme_sp_constrained_user_access_administrator
   role_definition_name = "User Access Administrator"
   principal_id         = azuread_service_principal.nme_app.object_id
   condition_version    = "2.0"
-  condition            = <<-EOT
-(
- (
-  !(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})
- )
- OR
- (
-  @Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {${join(",", [for r in data.azurerm_role_definition.constrained_roles : r.role_definition_id])}}
- )
-)
-AND
-(
- (
-  !(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})
- )
- OR
- (
-  @Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {${join(",", [for r in data.azurerm_role_definition.constrained_roles : r.role_definition_id])}}
- )
-)
-EOT
+  condition = join("", [
+    "((",
+    "!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})",
+    ")OR(",
+    "@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {",
+    join(",", [for r in data.azurerm_role_definition.constrained_roles : r.role_definition_id]),
+    "})",
+    ")AND(",
+    "(!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})",
+    ")OR(",
+    "@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {",
+    join(",", [for r in data.azurerm_role_definition.constrained_roles : r.role_definition_id]),
+    "}))",
+  ])
 }
 
 data "azuread_user" "role_assignees" {
