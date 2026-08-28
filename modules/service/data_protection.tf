@@ -41,7 +41,7 @@ data "azurerm_storage_account_sas" "dp_keys_sas" {
 }
 
 data "azurerm_storage_account_sas" "dp_locks_sas" {
-  connection_string = terraform_data.dp_primary_connection_string.output
+  connection_string = terraform_data.dp_primary_connection_string.store.sensitive_output
 
   https_only = true
 
