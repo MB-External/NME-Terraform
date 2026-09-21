@@ -24,9 +24,10 @@ module "service" {
 
   resource_group_name = azurerm_resource_group.core.name
 
-  azuread_app_name                     = var.azuread_app_name
-  azure_environment                    = var.azure_environment
-  subscription_display_name            = var.subscription_display_name
+  azuread_app_name                      = var.azuread_app_name
+  disable_implicit_grant_token_issuance = var.disable_implicit_grant_token_issuance
+  azure_environment                     = var.azure_environment
+  subscription_display_name             = var.subscription_display_name
 
   location = azurerm_resource_group.core.location
   protect_resources = var.protect_resources

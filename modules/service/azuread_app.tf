@@ -41,8 +41,8 @@ resource "azuread_application" "nme_app" {
     redirect_uris = [local.web_app_url, local.login_url]
 
     implicit_grant {
-      access_token_issuance_enabled = true
-      id_token_issuance_enabled     = true
+      access_token_issuance_enabled = !var.disable_implicit_grant_token_issuance
+      id_token_issuance_enabled     = !var.disable_implicit_grant_token_issuance
     }
   }
 

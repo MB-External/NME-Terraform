@@ -8,6 +8,12 @@ variable "azuread_app_name" {
   type        = string
 }
 
+variable "disable_implicit_grant_token_issuance" {
+  description = "Disable access and ID token issuance for implicit grant and hybrid flows. Set to false only to restore the legacy enabled behavior."
+  type        = bool
+  default     = true
+}
+
 variable "location" {
   description = "Location for all resources"
   type        = string

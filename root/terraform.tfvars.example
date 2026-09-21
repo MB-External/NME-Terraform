@@ -7,6 +7,10 @@ azuread_app_name = "nerdio-nmw-app-{unique_suffix}"
 azure_environment = "AzureCloud" #AzureCloud, AzureUSGovernment, AzureChinaCloud
 subscription_display_name = "My Production Subscription"
 
+# Disable access and ID token issuance for implicit grant and hybrid flows.
+# Set to false only to restore the legacy enabled behavior.
+disable_implicit_grant_token_issuance = true
+
 location = "westeurope"
 azure_tag_prefix = "NMW"
 

@@ -169,6 +169,14 @@ terraform plan -var-file="terraform.tfvars" -out="main.tfplan"
 terraform apply "main.tfplan"
 ```
 
+Terraform disables access and ID token issuance for implicit grant and hybrid flows by default. Applying the configuration also remediates an existing app registration already managed by this Terraform state and continues to reconcile these settings on later applies. Set `disable_implicit_grant_token_issuance = false` only when the legacy enabled behavior is required.
+
+For an app registration that is not managed by this Terraform state, or that is supplied to `install-az.ps1` by app and service principal IDs, disable both settings manually:
+
+```shell
+az ad app update --id <appId-or-objectId> --enable-access-token-issuance false --enable-id-token-issuance false
+```
+
 ## Configuration Examples
 
 ### 1) Baseline public deployment
@@ -299,6 +307,7 @@ tags_by_resource = {
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `protect_resources` | `bool` | `false` | Apply management locks to Key Vault, SQL Database, and Storage Account |
+| `disable_implicit_grant_token_issuance` | `bool` | `true` | Disable access and ID token issuance for implicit grant and hybrid flows. Set to `false` only for legacy compatibility |
 | `database_max_size_gb` | `number` | `250` | Maximum size of the SQL database in GB |
 | `tags_by_resource` | `map(map(string))` | `{}` | Resource-type-specific tags |
 | `configure_private_endpoints` | `bool` | `false` | Whether to create private endpoints for services |

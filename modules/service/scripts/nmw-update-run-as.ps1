@@ -17,11 +17,11 @@ $resourceGroupName = Get-AutomationVariable -Name 'resourceGroupName'
 $webAppName = Get-AutomationVariable -Name 'webAppName'
 
 $mgmtUri = "https://management.azure.com"
-$scmUriSiffix = ".scm.azurewebsites.net"
+$scmUriSuffix = ".scm.azurewebsites.net"
 
 if ($azureEnv -eq "AzureUSGovernment") {
     $mgmtUri = "https://management.usgovcloudapi.net"
-    $scmUriSiffix = ".scm.azurewebsites.us"
+    $scmUriSuffix = ".scm.azurewebsites.us"
 }
 
 function Get-AuthHeader {
@@ -64,7 +64,7 @@ function Get-ApiUri {
         [string]$Method
     )
 
-    $apiUri = "https://" + $Name + $scmUriSiffix + "/api/" + $Method
+    $apiUri = "https://" + $Name + $scmUriSuffix + "/api/" + $Method
     return $apiUri
 }
 
@@ -131,7 +131,7 @@ function Invoke-CommandWithRetries {
             $success = $true
         }
         catch {
-            Write-Output "$ScriptName atttempt $attempt of $MaxTries failed with exception:`r`n$($_.Exception.Message)`r`n"
+            Write-Output "$ScriptName attempt $attempt of $MaxTries failed with exception:`r`n$($_.Exception.Message)`r`n"
         }
     }
 
@@ -166,10 +166,19 @@ function Start-AppServiceWithRetries {
             $webApp = Restart-AzWebApp -ResourceGroupName $ResourceGroupName -Name $Name 
             Write-Output "Attempted to restart web app"
         }
-        Write-Output "Wait 120 seconds before trying to access the site..."
+        Write-Output "Waiting 120 seconds..."
         Start-Sleep -Seconds 120
-        Write-Output "Attempt to access the site..."
-        Invoke-WebRequest -Uri "https://$($webApp.DefaultHostName)" -UseBasicParsing
+        Write-Output "Checking App Service status..."
+
+        if ([System.Version]$webApp.SiteConfig.MinTlsVersion -ge "1.3") {
+            $webApp = Get-AzWebApp -ResourceGroupName $ResourceGroupName -Name $Name 
+            if ($webApp.State -ne "Running") {
+                throw "Unexpected App Service status: $($webApp.State)"
+            }
+        }
+        else {
+            Invoke-WebRequest -Uri "https://$($webApp.DefaultHostName)" -UseBasicParsing
+        }
         return $webApp
     } | `
         ForEach-Object { if ($_ -is [string]) { Write-Output $_ } else { $startAppServiceResult = $_ } }
@@ -195,17 +204,17 @@ function Start-ProvisionWebJobWithRetries {
         [int]$SleepSeconds
     )
 
-    Write-Output "Starting provison web job.."
+    Write-Output "Starting provision web job.."
     $startWebJobResult = $null
-    Invoke-CommandWithRetries -MaxTries $MaxTries -SleepSeconds $SleepSeconds -ScriptName "Start provison web job" `
+    Invoke-CommandWithRetries -MaxTries $MaxTries -SleepSeconds $SleepSeconds -ScriptName "Start provision web job" `
         -ScriptToRun { Start-WebAppJob -AuthInfo $AuthInfo -Name $Name } | `
         ForEach-Object { if ($_ -is [string]) { Write-Output $_ } else { $startWebJobResult = $_ } }
 
     if ($startWebJobResult.Success) {
-        Write-Output "Successfully started provison web job`r`n"
+        Write-Output "Successfully started provision web job`r`n"
     }
     else {
-        Write-Output "Failed to start provison web job`r`n"
+        Write-Output "Failed to start provision web job`r`n"
     }
     Write-Output $startWebJobResult.Output
 }
@@ -292,22 +301,22 @@ Get-AzWebApp -ResourceGroupName $resourceGroupName -Name $webAppName
 
 $authInfo = Get-AuthInfo -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -Name $webAppName
 
-Write-Output "Stopping provison web job.."
-$stopProvisonWebJobResult = $null
-Invoke-CommandWithRetries -MaxTries 5 -SleepSeconds 30 -ScriptName "Stop provison web job" `
+Write-Output "Stopping provision web job.."
+$stopProvisionWebJobResult = $null
+Invoke-CommandWithRetries -MaxTries 5 -SleepSeconds 30 -ScriptName "Stop provision web job" `
     -ScriptToRun { Stop-WebAppJob -AuthInfo $authInfo -Name $webAppName } | `
-    ForEach-Object { if ($_ -is [string]) { Write-Output $_ } else { $stopProvisonWebJobResult = $_ } }
+    ForEach-Object { if ($_ -is [string]) { Write-Output $_ } else { $stopProvisionWebJobResult = $_ } }
 
-if (!$stopProvisonWebJobResult.Success) {
-    Write-Output "Failed to stop provison web job, trying to start it back"
+if (!$stopProvisionWebJobResult.Success) {
+    Write-Output "Failed to stop provision web job, trying to start it back"
 
     Start-ProvisionWebJobWithRetries -AuthInfo $authInfo -Name $webAppName -MaxTries 3 -SleepSeconds 30
     
-    throw "Failed to stop provison web job"
+    throw "Failed to stop provision web job"
 }
 else {
-    Write-Output "Successfully stopped provison web job`r`n"
-    Write-Output $stopProvisonWebJobResult.Output
+    Write-Output "Successfully stopped provision web job`r`n"
+    Write-Output $stopProvisionWebJobResult.Output
 }
 
 
@@ -318,7 +327,7 @@ Invoke-CommandWithRetries -MaxTries 5 -SleepSeconds 30 -ScriptName "Stop web app
     ForEach-Object { if ($_ -is [string]) { Write-Output $_ } else { $stopWebAppResult = $_ } }
 
 if (!$stopWebAppResult.Success) {
-    Write-Output "Failed to stop web app, trying to start App Service and provison web job"
+    Write-Output "Failed to stop web app, trying to start App Service and provision web job"
 
     Start-AppServiceWithRetries -ResourceGroupName $resourceGroupName -Name $webAppName -MaxTries 3 -SleepSeconds 30
 
