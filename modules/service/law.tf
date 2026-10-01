@@ -129,4 +129,9 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
       {}
     )
   )
+  lifecycle {
+    ignore_changes = [
+      data_sources,
+    ]
+  }
 }
